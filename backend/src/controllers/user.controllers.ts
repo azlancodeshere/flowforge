@@ -156,9 +156,7 @@ export const registerUser = async (req:Request, res:Response):Promise<void>=>{
       
     }
 
-    // Normalize the way the schema does on save (email: lowercase+trim,
-    // username: trim) — mongoose does NOT transform query values, so raw
-    // input like " JOHN@X.COM " would miss the duplicate and slip through.
+    
     const existingUser = await User.findOne({
       $or:[
         {username: username.trim()},
@@ -271,8 +269,7 @@ export const loginUser = async (
     }
 
    
-    // password is `select: false` — opting OUT here left user.password
-    // undefined, so bcrypt.compare() could never succeed
+  
     const user = await User.findOne(identifier).select("+password");
 
     if (!user) {
@@ -348,8 +345,7 @@ export const logoutUser = async (req: Request, res: Response): Promise<void> => 
   };
 
   try {
-    // verifyJWT (route middleware) guarantees req.user — revoke the stored
-    // refresh token even if the refresh cookie itself is missing or expired.
+    
     await User.findByIdAndUpdate(req.user._id, {
       $unset: {
         refreshToken: null,
