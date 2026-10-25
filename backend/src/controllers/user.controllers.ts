@@ -187,16 +187,12 @@ const registerUser = async ( req: Request,res: Response): Promise<void> => {
     });
   }
 };
-
-const loginUser = async (req: Request,res: Response): Promise<void> => {
+const loginUser = async (req: Request, res: Response): Promise<void> => {
   try {
     const { email, username, password } = req.body;
 
     if ((!email && !username) || !password) {
-      throw new ApiError(
-        400,
-        "Email/username and password are required"
-      );
+      throw new ApiError(400, "Email/username and password are required");
     }
 
     const conditions: Record<string, string>[] = [];
@@ -204,11 +200,15 @@ const loginUser = async (req: Request,res: Response): Promise<void> => {
     if (email) conditions.push({ email });
     if (username) conditions.push({ username });
 
-    const user:any = await User.findOne({ $or: conditions });
+    const user = await User.findOne({ $or: conditions });
 
     if (!user) {
       throw new ApiError(401, "Invalid email/username or password");
     }
+    
+    console.log("Request password exists:", Boolean(password));
+console.log("Database password exists:", Boolean(user.password));
+console.log("User found:", Boolean(user));
 
     const isPasswordValid = await user.isPasswordCorrect(password);
 
@@ -239,10 +239,19 @@ const loginUser = async (req: Request,res: Response): Promise<void> => {
       .cookie("accessToken", accessToken, options)
       .cookie("refreshToken", refreshToken, options)
       .json(
-        new ApiResponse(200, "User logged in successfully"
-        
-        ));
+        new ApiResponse(
+          200,
+          {
+            user: loggedInUser,
+            accessToken,
+            refreshToken,
+          },
+          "User logged in successfully"
+        )
+      );
   } catch (error: unknown) {
+    console.error("LOGIN CONTROLLER ERROR:", error);
+
     const apiError =
       error instanceof ApiError
         ? error

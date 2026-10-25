@@ -32,6 +32,7 @@ const handleChange = (e:React.ChangeEvent<HTMLInputElement>) =>{
 
 const handleSubmit = async (e:SyntheticEvent<HTMLFormElement>) =>{
     e.preventDefault();
+    console.log("button clicked")
 
     try {
 
@@ -155,7 +156,7 @@ const handleSubmit = async (e:SyntheticEvent<HTMLFormElement>) =>{
           
 
             <button
-              type="button"
+              type="submit"
               className="w-full rounded-xl bg-blue-600 px-4 py-3.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-[#0D1221]"
             >
               Create Account

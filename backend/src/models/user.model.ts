@@ -23,7 +23,7 @@ const userSchema = new Schema<IUser>(
       trim: true,
       match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, "Invalid email address"],
     },
-    password: { type: String, required: true, minlength: 8, select: false },
+    password: { type: String, required: true, minlength: 8 },
     refreshToken: { type: String, select: false },
   },
   { timestamps: true }
@@ -35,8 +35,8 @@ userSchema.pre("save", async function () {
   }
 })
 
-userSchema.methods.isPasswordCorrect = async function (entered: string) {
-  return bcrypt.compare(entered, this.password)
+userSchema.methods.isPasswordCorrect = async function (password: string) {
+  return bcrypt.compare(password, this.password)
 }
 
 userSchema.methods.generateAccessToken = function () {

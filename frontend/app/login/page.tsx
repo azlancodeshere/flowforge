@@ -1,12 +1,11 @@
 "use client"
 
 import Link from "next/link";
-import { useContext, useState } from "react";
-import api from "@/lib/api";
+import { useState } from "react";
 import type { ChangeEvent, SyntheticEvent } from "react";
-import { AuthContext, useAuth} from "../context/AuthContext";
-import  {useRouter} from "next/navigation"
-
+import api from "@/lib/api";
+import { useAuth } from "../context/AuthContext";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
 
@@ -144,7 +143,7 @@ export default function LoginPage() {
             </div>
 
             <button
-              type="button"
+              type="submit"
               className="w-full rounded-xl bg-blue-600 px-4 py-3.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 focus:ring-offset-[#0D1221]"
             >
               Sign In
