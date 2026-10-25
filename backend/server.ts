@@ -23,8 +23,8 @@ app.use(express.json())
 app.use("/api/user", userRoutes)
 
 
-// Global error handler: anything forwarded via next(error) (e.g. from
-// authMiddleware) becomes a JSON response instead of Express's HTML page.
+
+
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
   if (err instanceof ApiError) {
     res.status(err.statusCode).json({
