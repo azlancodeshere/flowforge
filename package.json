@@ -1,0 +1,34 @@
+{
+  "name": "flowforge-root",
+  "version": "1.0.0",
+  "private": true,
+  "description": "FlowForge - Modern visual workflow automation platform",
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "concurrently -n \"backend,frontend\" -c \"blue,green\" \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "npm run dev --prefix backend",
+    "dev:frontend": "npm run dev --prefix frontend",
+    "build": "npm run build --prefix backend && npm run build --prefix frontend",
+    "build:backend": "npm run build --prefix backend",
+    "build:frontend": "npm run build --prefix frontend",
+    "lint": "npm run lint --prefix frontend",
+    "lint:frontend": "npm run lint --prefix frontend",
+    "typecheck": "tsc -p backend --noEmit"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  },
+  "keywords": [
+    "workflow-builder",
+    "visual-automation",
+    "react-flow",
+    "nextjs",
+    "express",
+    "mongodb"
+  ],
+  "author": "FlowForge Team",
+  "license": "MIT"
+}
