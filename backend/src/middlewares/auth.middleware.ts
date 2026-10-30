@@ -8,27 +8,27 @@ import {z} from "zod"
 
 export const authMiddleware = async (req: Request,res: Response,next: NextFunction): Promise<void> => {
   try {
-    
+
     const token: string | undefined =
       req.cookies?.accessToken ||
       req.headers.authorization?.replace(/^Bearer\s+/i, "");
 
-    
+
     if (!token) {
       throw new ApiError(401, "Unauthorized request");
     }
 
-   
+
     const secret = process.env.ACCESS_TOKEN_SECRET;
 
     if (!secret) {
       throw new ApiError(500, "Access token secret is missing");
     }
 
-    
+
     const decodedToken = jwt.verify(token, secret);
 
-   
+
     if (
       typeof decodedToken === "string" ||
       typeof decodedToken._id !== "string" ||
@@ -37,7 +37,7 @@ export const authMiddleware = async (req: Request,res: Response,next: NextFuncti
       throw new ApiError(401, "Invalid access token");
     }
 
-   
+
     const user = await User.findById(decodedToken._id).select(
       "-password -refreshToken"
     );
@@ -46,10 +46,10 @@ export const authMiddleware = async (req: Request,res: Response,next: NextFuncti
       throw new ApiError(401, "Invalid access token");
     }
 
-   
+
     req.user = user;
 
-    
+
     next();
 
 
@@ -99,3 +99,5 @@ export const validateRequest = (schema: z.ZodType) => { return (req: Request,res
     next();
   };
 };
+
+

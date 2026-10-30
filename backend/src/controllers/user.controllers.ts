@@ -52,7 +52,8 @@ const refreshAccessToken = async ( req: Request,res: Response): Promise<void> =>
       throw new ApiError(401, "Invalid refresh token");
     }
 
-    const user = await User.findById(decodedToken._id);
+
+    const user = await User.findById(decodedToken._id).select("+refreshToken");
 
     if (!user || incomingRefreshToken !== user.refreshToken) {
       throw new ApiError(401, "Refresh token is expired or invalid");
@@ -75,8 +76,8 @@ const refreshAccessToken = async ( req: Request,res: Response): Promise<void> =>
       .json(
         new ApiResponse(
           200,
-          "Access token refreshed successfully",
-          accessToken 
+          accessToken,
+          "Access token refreshed successfully"
         )
       );
   } catch (error: unknown) {
@@ -187,6 +188,7 @@ const registerUser = async ( req: Request,res: Response): Promise<void> => {
     });
   }
 };
+
 const loginUser = async (req: Request, res: Response): Promise<void> => {
   try {
     const { email, username, password } = req.body;
@@ -205,10 +207,7 @@ const loginUser = async (req: Request, res: Response): Promise<void> => {
     if (!user) {
       throw new ApiError(401, "Invalid email/username or password");
     }
-    
-    console.log("Request password exists:", Boolean(password));
-console.log("Database password exists:", Boolean(user.password));
-console.log("User found:", Boolean(user));
+
 
     const isPasswordValid = await user.isPasswordCorrect(password);
 
@@ -286,7 +285,7 @@ const logoutUser = async (req: Request,res: Response): Promise<void> => {
       .status(200)
       .clearCookie("accessToken", options)
       .clearCookie("refreshToken", options)
-      .json(new ApiResponse(200, "User logged out successfully"));
+      .json(new ApiResponse(200, null, "User logged out successfully"));
   } catch (error: unknown) {
     const apiError =
       error instanceof ApiError
@@ -311,8 +310,8 @@ const updateAccount = async (req: Request,res: Response): Promise<void> => {
 
     if (
       email === undefined &&
-      username === undefined 
-     
+      username === undefined
+
     ) {
       throw new ApiError(400, "At least one field is required");
     }
@@ -320,12 +319,12 @@ const updateAccount = async (req: Request,res: Response): Promise<void> => {
     const updates: {
       email?: string;
       username?: string;
-     
+
     } = {};
 
     if (email !== undefined) updates.email = email;
     if (username !== undefined) updates.username = username;
-   
+
     const user = await User.findByIdAndUpdate(
       req.user._id,
       { $set: updates },
@@ -338,7 +337,7 @@ const updateAccount = async (req: Request,res: Response): Promise<void> => {
 
     res.status(200).json(
       new ApiResponse(
-        200, 
+        200,
         user,
         "Account details updated successfully",
       )
@@ -373,8 +372,8 @@ const updateAccount = async (req: Request,res: Response): Promise<void> => {
   res.status(200).json(
     new ApiResponse(
       200,
-      "Account details fetched successfully",
-      user
+      user,
+      "Account details fetched successfully"
     )
   );
 };
