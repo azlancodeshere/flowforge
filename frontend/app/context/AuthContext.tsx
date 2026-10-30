@@ -29,7 +29,7 @@ function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  
+
 
   const logout = async () => {
     try {
@@ -42,7 +42,7 @@ function AuthProvider({ children }: { children: ReactNode }) {
 
   const getCurrentUser = async () => {
     try {
-      const response = await api.get("/users/current-user");
+      const response = await api.get("/user/me");
       const currentUser = response.data.data;
 
       setUser(currentUser);
@@ -56,6 +56,7 @@ function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    
     void getCurrentUser();
   }, []);
 

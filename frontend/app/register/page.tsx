@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import api from "@/lib/api";
-import { ChangeEvent, SyntheticEvent } from "react";
+import type { SyntheticEvent } from "react";
 import { useAuth } from "../context/AuthContext";
 import {useRouter} from "next/navigation"
 
@@ -38,7 +38,7 @@ const handleSubmit = async (e:SyntheticEvent<HTMLFormElement>) =>{
 
         const response = await api.post("/user/register",formData)
 
-        const registerUser = response.data.data.user
+        const registerUser = response.data.data
         setUser(registerUser)
         setIsAuthenticated(true)
 

@@ -1,8 +1,7 @@
 "use client"
 
 import Link from "next/link";
-import { useState } from "react";
-import type { ChangeEvent, SyntheticEvent } from "react";
+import { useState, type SyntheticEvent } from "react";
 import api from "@/lib/api";
 import { useAuth } from "../context/AuthContext";
 import { useRouter } from "next/navigation";
