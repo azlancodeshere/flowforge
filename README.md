@@ -27,7 +27,6 @@ Build, connect, and automate complex tasks with a high-performance node-based ca
   - [1. Clone & Install](#1-clone--install)
   - [2. Environment Configuration](#2-environment-configuration)
   - [3. Start Development Server](#3-start-development-server)
-- [Docker Deployment](#-docker-deployment)
 - [Available Scripts](#-available-scripts)
 - [REST API Reference](#-rest-api-reference)
 - [Security & Authentication](#-security--authentication)
@@ -42,7 +41,7 @@ Build, connect, and automate complex tasks with a high-performance node-based ca
 - **Interactive Canvas UI**: Drag-and-drop workflow authoring with smart conditions, automated triggers, and execution steps powered by `@xyflow/react`.
 - **Stateless & Secure Authentication**: Dual-token architecture (Access + Refresh Tokens) issued via secure HTTP-only cookies with cryptographic verification.
 - **Robust API Gateway**: Express 5 REST API built with TypeScript, strict schema validation powered by Zod, and centralized error handling.
-- **Modern Monorepo Tooling**: Unified npm workspace orchestration, containerization with Docker Compose, and automated CI pipelines.
+- **Modern Monorepo Tooling**: Unified npm workspace orchestration and automated CI pipelines.
 
 ---
 
@@ -89,16 +88,16 @@ flowforge/
 │   │   ├── config/              # Centralized environment configuration
 │   │   ├── controllers/         # Request handling & business controllers
 │   │   ├── middlewares/         # JWT auth & Zod request validation
-│   │   ├── models/              # Mongoose data schemas (User)
+│   │   ├── models/              # Mongoose data schemas (User, Workflow)
 │   │   ├── routes/              # Express API route declarations
 │   │   ├── types/               # TypeScript type extensions
 │   │   ├── utils/               # ApiError & ApiResponse helpers
 │   │   └── validators/          # Zod input schemas
 │   ├── .env.example             # Backend environment template
-│   ├── Dockerfile               # Production container definition
 │   ├── package.json
 │   ├── server.ts                # Application entrypoint
-│   └── tsconfig.json
+│   ├── tsconfig.json
+│   └── tsconfig.build.json      # Build config (excludes test files)
 ├── frontend/                    # Next.js 16 Web Application
 │   ├── app/                     # App Router pages & layouts
 │   │   ├── components/          # Reusable UI components (Navbar, etc.)
@@ -109,14 +108,12 @@ flowforge/
 │   │   └── layout.tsx           # Root application shell
 │   ├── lib/                     # Axios API client instance
 │   ├── .env.example             # Frontend environment template
-│   ├── Dockerfile               # Production container definition
+│   ├── eslint.config.mjs        # ESLint rules
+│   ├── next.config.ts           # Next.js configuration
 │   ├── package.json
 │   └── tsconfig.json
-├── .dockerignore
-├── .editorconfig                # Multi-IDE formatting standards
 ├── .gitignore                   # Monorepo-wide git exclusion rules
-├── .prettierrc                  # Prettier formatting rules
-├── docker-compose.yml           # Multi-container local orchestration
+├── LICENSE                      # MIT license terms
 ├── package.json                 # Monorepo root scripts & workspaces
 └── README.md                    # Project documentation
 ```
@@ -130,7 +127,6 @@ Before running the project locally, ensure you have:
 - **Node.js**: v20.x or higher ([Download Node.js](https://nodejs.org/))
 - **npm**: v10.x or higher
 - **MongoDB**: A running local instance (`mongodb://localhost:27017`) or a [MongoDB Atlas](https://www.mongodb.com/atlas) connection URI
-- **Docker & Docker Compose** *(optional, for containerized run)*
 
 ---
 
@@ -195,22 +191,6 @@ npm run dev:frontend
 
 ---
 
-## 🐳 Docker Deployment
-
-To spin up the entire ecosystem (MongoDB + Backend + Frontend) using Docker Compose:
-
-```bash
-docker compose up --build
-```
-
-To stop the containers:
-
-```bash
-docker compose down
-```
-
----
-
 ## 📜 Available Scripts
 
 | Command | Scope | Description |
@@ -222,15 +202,20 @@ docker compose down
 | `npm run build:backend` | Backend | Compiles TypeScript into `dist/` |
 | `npm run build:frontend` | Frontend | Creates optimized production build of Next.js app |
 | `npm run lint` | Frontend | Runs ESLint analysis across the frontend codebase |
-| `npm run typecheck` | Backend | Executes TypeScript typecheck without emitting output files |
+| `npm run typecheck` | Monorepo | Typechecks both the backend and frontend without emitting files |
+| `npm run test` | Backend | Runs the backend unit tests via Node's built-in test runner |
 
 ---
 
 ## 📡 REST API Reference
 
-All backend endpoints are prefixed with `/api/user`.
+### Health
 
-### Authentication & User Management
+| Method | Endpoint | Auth | Request Body | Description |
+| :--- | :--- | :---: | :--- | :--- |
+| `GET` | `/api/health` | No | None | Liveness probe returning status, uptime and timestamp |
+
+### Authentication & User Management (`/api/user`)
 
 | Method | Endpoint | Auth | Request Body | Description |
 | :--- | :--- | :---: | :--- | :--- |
@@ -240,6 +225,22 @@ All backend endpoints are prefixed with `/api/user`.
 | `POST` | `/api/user/refresh-token` | No | `{ refreshToken? }` (or cookie) | Rotates and issues a new access token |
 | `GET` | `/api/user/me` | **Yes** | None | Returns profile details of the authenticated user |
 | `PATCH` | `/api/user/update` | **Yes** | `{ username?, email? }` | Updates username or email for current user |
+
+### Workflows (`/api/workflows`)
+
+Every workflow endpoint requires authentication.
+
+| Method | Endpoint | Auth | Request Body | Description |
+| :--- | :--- | :---: | :--- | :--- |
+| `POST` | `/api/workflows/create-workflow` | **Yes** | `{ workflowname, description, nodes, edges }` | Creates a workflow (`description` must be non-empty) |
+| `GET` | `/api/workflows/get-allWorkflow` | **Yes** | None | Lists workflows for the current user |
+| `GET` | `/api/workflows/get-singleWorkflow/:id` | **Yes** | None | Returns one workflow by id |
+| `PATCH` | `/api/workflows/update-workflow/:id` | **Yes** | `{ workflowname?, description?, nodes?, edges? }` | Partially updates a workflow |
+| `DELETE` | `/api/workflows/delete-workflow/:id` | **Yes** | None | Deletes a workflow |
+| `POST` | `/api/workflows/execute-workflow/:id/execute` | **Yes** | None | Triggers a workflow run |
+
+Unknown paths under `/api` return the standard error envelope with a `404`
+status code.
 
 ### Standard Response Envelope
 
@@ -276,8 +277,8 @@ All backend endpoints are prefixed with `/api/user`.
 ## 🛡 Engineering Standards & CI/CD
 
 - **Strict Type Safety**: TypeScript enabled across both client and server tiers.
-- **Automated Quality Gate**: GitHub Actions runs on all commits and PRs to `main`, ensuring zero lint warnings and successful builds.
-- **Code Style Consistency**: Enforced via `.editorconfig` and `.prettierrc`.
+- **Automated Quality Gate**: GitHub Actions runs on all commits and PRs to `main`, running ESLint, typechecking both workspaces, executing the backend test suite and verifying production builds.
+- **Unit Tests**: Backend helpers and Zod validators are covered by a dependency-free `node:test` suite.
 
 ---
 
