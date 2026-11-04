@@ -427,7 +427,7 @@ export default function HomePage() {
             </p>
           </div>
           <Link
-            href={isAuthenticated ? "/dashboard" : "login"}
+            href={isAuthenticated ? "/dashboard" : "/login"}
             className="inline-flex shrink-0 items-center justify-center gap-3 rounded-xl bg-white px-6 py-4 text-sm font-bold text-indigo-700 transition hover:bg-indigo-50"
           >
             Get Started Free <span>→</span>
