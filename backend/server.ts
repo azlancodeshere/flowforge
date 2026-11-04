@@ -26,6 +26,21 @@ app.use(express.json());
 app.use("/api/user", userRoutes);
 app.use("/api/workflows", workflowRoutes);
 
+// Liveness probe for CI, load balancers and the frontend to verify the API
+// is up without touching MongoDB.
+app.get("/api/health", (_req: Request, res: Response) => {
+  res.status(200).json({
+    statusCode: 200,
+    message: "OK",
+    success: true,
+    data: {
+      status: "up",
+      uptime: Math.round(process.uptime()),
+      timestamp: new Date().toISOString(),
+    },
+  });
+});
+
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
   if (err instanceof ApiError) {
     res.status(err.statusCode).json({
