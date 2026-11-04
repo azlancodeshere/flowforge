@@ -41,6 +41,16 @@ app.get("/api/health", (_req: Request, res: Response) => {
   });
 });
 
+// Anything under /api that did not match a route returns JSON rather than
+// Express' default HTML 404 page.
+app.use("/api", (_req: Request, res: Response) => {
+  res.status(404).json({
+    statusCode: 404,
+    message: "Route not found",
+    success: false,
+  });
+});
+
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
   if (err instanceof ApiError) {
     res.status(err.statusCode).json({
