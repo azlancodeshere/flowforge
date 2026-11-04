@@ -1,8 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { connection } from "next/server";
-import { Suspense } from "react";
 import Navbar from "./components/Navbar";
 import { useAuth } from "./context/AuthContext";
 import CurrentYear from "./components/CurrentYear";
@@ -230,7 +228,7 @@ function WorkflowPreview() {
 
 export default function HomePage() {
 
-  const {isAuthenticated,isLoading} = useAuth()
+  const { isAuthenticated } = useAuth();
 
 
   return (
