@@ -28,7 +28,10 @@ jobs:
         run: npm run lint:frontend
 
       - name: Typecheck Backend
-        run: npm run typecheck
+        run: npm run typecheck:backend
+
+      - name: Typecheck Frontend
+        run: npm run typecheck:frontend
 
       - name: Build Backend
         run: npm run build:backend

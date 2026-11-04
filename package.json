@@ -16,7 +16,9 @@
     "build:frontend": "npm run build --prefix frontend",
     "lint": "npm run lint --prefix frontend",
     "lint:frontend": "npm run lint --prefix frontend",
-    "typecheck": "tsc -p backend --noEmit"
+    "typecheck": "npm run typecheck:backend && npm run typecheck:frontend",
+    "typecheck:backend": "tsc -p backend --noEmit",
+    "typecheck:frontend": "tsc -p frontend --noEmit"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"
