@@ -24,18 +24,21 @@ const Navbar = () => {
         </Link>
 
         <div className="hidden items-center gap-7 text-sm font-medium text-slate-600 md:flex">
-          <a href="/#features" className="transition hover:text-indigo-600">
+          <Link href="/#features" className="transition hover:text-indigo-600">
             Features
-          </a>
-          <a href="/#how-it-works" className="transition hover:text-indigo-600">
+          </Link>
+          <Link
+            href="/#how-it-works"
+            className="transition hover:text-indigo-600"
+          >
             How it Works
-          </a>
-          <a href="/#templates" className="transition hover:text-indigo-600">
+          </Link>
+          <Link href="/#templates" className="transition hover:text-indigo-600">
             Templates
-          </a>
-          <a href="/#faq" className="transition hover:text-indigo-600">
+          </Link>
+          <Link href="/#faq" className="transition hover:text-indigo-600">
             FAQ
-          </a>
+          </Link>
         </div>
 
         <div className="flex shrink-0 items-center gap-2 sm:gap-3">
