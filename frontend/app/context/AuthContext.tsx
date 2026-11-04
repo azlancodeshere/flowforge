@@ -1,6 +1,13 @@
 "use client";
 
-import {createContext,useContext,useState, useEffect, type ReactNode,} from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  type ReactNode,
+} from "react";
 import api from "@/lib/api";
 
 type User = {
@@ -9,8 +16,6 @@ type User = {
   email: string;
   username?: string;
 };
-
-
 
 type AuthContextType = {
   user: User | null;
@@ -29,36 +34,62 @@ function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Reads the session from the API without touching state, so callers can
+  // decide when (and whether) to apply the result.
+  const requestCurrentUser = useCallback(async (): Promise<User | null> => {
+    const response = await api.get("/user/me");
+    return (response.data.data as User | null) ?? null;
+  }, []);
 
+  const applySession = useCallback((currentUser: User | null) => {
+    setUser(currentUser);
+    setIsAuthenticated(Boolean(currentUser));
+  }, []);
 
-  const logout = async () => {
+  const clearSession = useCallback(() => {
+    setUser(null);
+    setIsAuthenticated(false);
+  }, []);
+
+  const logout = useCallback(async () => {
     try {
       await api.post("/user/logout");
     } finally {
-      setUser(null);
-      setIsAuthenticated(false);
+      clearSession();
     }
-  };
+  }, [clearSession]);
 
-  const getCurrentUser = async () => {
+  const getCurrentUser = useCallback(async () => {
     try {
-      const response = await api.get("/user/me");
-      const currentUser = response.data.data;
-
-      setUser(currentUser);
-      setIsAuthenticated(Boolean(currentUser));
+      applySession(await requestCurrentUser());
     } catch {
-      setUser(null);
-      setIsAuthenticated(false);
+      clearSession();
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [requestCurrentUser, applySession, clearSession]);
 
   useEffect(() => {
-    
-    void getCurrentUser();
-  }, []);
+    let cancelled = false;
+
+    // State is applied inside the promise callbacks rather than in the effect
+    // body, which avoids a cascading render. The flag drops updates that land
+    // after the provider unmounts.
+    requestCurrentUser()
+      .then((currentUser) => {
+        if (!cancelled) applySession(currentUser);
+      })
+      .catch(() => {
+        if (!cancelled) clearSession();
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [requestCurrentUser, applySession, clearSession]);
 
   const authValue: AuthContextType = {
     user,
