@@ -1,9 +1,6 @@
 
 import { z } from "zod";
 
-// ========================================
-// 1. NODE VALIDATION
-// ========================================
 
 const nodeSchema = z.object({
   id: z.string().min(1, "Node ID is required"),
@@ -18,9 +15,6 @@ const nodeSchema = z.object({
   data: z.record(z.string(), z.unknown()).default({}),
 });
 
-// ========================================
-// 2. EDGE VALIDATION
-// ========================================
 
 const edgeSchema = z.object({
   id: z.string().min(1, "Edge ID is required"),
@@ -29,18 +23,13 @@ const edgeSchema = z.object({
 
   target: z.string().min(1, "Target node is required"),
 
-  // Condition node ke True/False outputs
   sourceHandle: z.string().nullable().optional(),
 
-  // Target node ka input handle
   targetHandle: z.string().nullable().optional(),
 
   label: z.string().optional(),
 });
 
-// ========================================
-// 3. CREATE WORKFLOW VALIDATOR
-// ========================================
 
 export const createWorkflowValidator = z.object({
   body: z.object({
@@ -62,9 +51,6 @@ export const createWorkflowValidator = z.object({
   }),
 });
 
-// ========================================
-// 4. UPDATE WORKFLOW VALIDATOR
-// ========================================
 
 export const updateWorkflowValidator = z.object({
   body: z
@@ -97,9 +83,6 @@ export const updateWorkflowValidator = z.object({
     ),
 });
 
-// ========================================
-// 5. WORKFLOW ID VALIDATOR
-// ========================================
 
 export const workflowIdValidator = z.object({
   params: z.object({

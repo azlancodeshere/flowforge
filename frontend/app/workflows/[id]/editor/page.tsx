@@ -31,9 +31,6 @@ import type {
 
 import "@xyflow/react/dist/style.css";
 
-// =====================================================
-// 1. TYPES
-// =====================================================
 
 type WorkflowNodeData = {
   label: string;
@@ -55,9 +52,6 @@ type NodeItem = {
   border: string;
 };
 
-// =====================================================
-// 2. NODE TYPES
-// =====================================================
 
 const nodeTypes = {
   conditionNode: ConditionNode,
@@ -97,9 +91,6 @@ const nodeItems: NodeItem[] = [
 const inputClass =
   "w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-violet-500 text-white";
 
-// =====================================================
-// 3. PAGE COMPONENT
-// =====================================================
 
 export default function WorkflowEditorPage() {
   return (
@@ -115,9 +106,6 @@ export default function WorkflowEditorPage() {
   );
 }
 
-// =====================================================
-// 4. MAIN EDITOR COMPONENT
-// =====================================================
 
 function WorkflowEditorContent() {
   const params = useParams<{ id: string }>();
@@ -141,7 +129,6 @@ function WorkflowEditorContent() {
   const [saveMessage, setSaveMessage] = useState("");
   const [saveError, setSaveError] = useState(false);
 
-  // Workflow execution states
 
   const [showRunModal, setShowRunModal] = useState(false);
   const [inputMarks, setInputMarks] = useState("50");
@@ -152,9 +139,6 @@ function WorkflowEditorContent() {
 
   const [executionError, setExecutionError] = useState("");
 
-  // =====================================================
-  // 5. LOAD WORKFLOW
-  // =====================================================
 
   useEffect(() => {
     let isMounted = true;
@@ -297,9 +281,6 @@ function WorkflowEditorContent() {
     };
   }, [workflowId]);
 
-  // =====================================================
-  // 6. ADD NODE
-  // =====================================================
 
   const addNodeToCanvas = (
     item: NodeItem,
@@ -362,9 +343,6 @@ function WorkflowEditorContent() {
     setSaveMessage("");
   };
 
-  // =====================================================
-  // 7. DRAG AND DROP
-  // =====================================================
 
   const handleDragStart = (
     event: DragEvent<HTMLDivElement>,
@@ -410,9 +388,6 @@ function WorkflowEditorContent() {
     addNodeToCanvas(item, position);
   };
 
-  // =====================================================
-  // 8. NODE CHANGES
-  // =====================================================
 
   const handleNodesChange = (
     changes: NodeChange<WorkflowNode>[]
@@ -425,9 +400,6 @@ function WorkflowEditorContent() {
     );
   };
 
-  // =====================================================
-  // 9. EDGE CHANGES
-  // =====================================================
 
   const handleEdgesChange = (
     changes: EdgeChange[]
@@ -437,9 +409,6 @@ function WorkflowEditorContent() {
     );
   };
 
-  // =====================================================
-  // 10. CONNECT NODES
-  // =====================================================
 
   const handleConnect = (params: Connection) => {
     const branchLabel =
@@ -489,9 +458,6 @@ function WorkflowEditorContent() {
     setSaveMessage("");
   };
 
-  // =====================================================
-  // 11. SELECT NODE
-  // =====================================================
 
   const handleNodeClick = (
     _event: MouseEvent,
@@ -500,9 +466,6 @@ function WorkflowEditorContent() {
     setSelectedNode(node);
   };
 
-  // =====================================================
-  // 12. UPDATE NODE DATA
-  // =====================================================
 
   const updateSelectedNodeData = (
     key: keyof WorkflowNodeData,
@@ -539,9 +502,6 @@ function WorkflowEditorContent() {
     setSaveMessage("");
   };
 
-  // =====================================================
-  // 13. DELETE NODE
-  // =====================================================
 
   const deleteSelectedNode = () => {
     if (!selectedNode) return;
@@ -564,9 +524,6 @@ function WorkflowEditorContent() {
     setSaveMessage("");
   };
 
-  // =====================================================
-  // 14. SAVE WORKFLOW
-  // =====================================================
 
   const handleSaveWorkflow = async () => {
     if (isLoadingWorkflow || isSaving) return;
@@ -624,9 +581,6 @@ function WorkflowEditorContent() {
     }
   };
 
-  // =====================================================
-  // 15. RUN WORKFLOW
-  // =====================================================
 
   const handleRunWorkflow = async () => {
     if (
@@ -671,7 +625,6 @@ function WorkflowEditorContent() {
       setExecutionError("");
       setExecutionResult(null);
 
-      // Save latest canvas data first
 
       const formattedNodes = nodes.map((node) => ({
         id: node.id,
@@ -700,7 +653,6 @@ function WorkflowEditorContent() {
         }
       );
 
-      // Execute workflow
 
       const response = await api.post(
         `/workflows/execute-workflow/${workflowId}/execute`,
@@ -731,14 +683,10 @@ function WorkflowEditorContent() {
     }
   };
 
-  // =====================================================
-  // 16. UI
-  // =====================================================
 
   return (
     <div className="h-screen bg-[#0b1120] text-white flex flex-col overflow-hidden">
 
-      {/* HEADER */}
 
       <header className="h-16 border-b border-slate-800 flex items-center justify-between px-6 shrink-0">
 
@@ -821,11 +769,9 @@ function WorkflowEditorContent() {
 
       </header>
 
-      {/* MAIN EDITOR */}
 
       <div className="flex flex-1 min-h-0">
 
-        {/* LEFT SIDEBAR */}
 
         <aside className="w-64 border-r border-slate-800 p-5 shrink-0 overflow-y-auto">
 
@@ -889,7 +835,6 @@ function WorkflowEditorContent() {
 
         </aside>
 
-        {/* CANVAS */}
 
         <main
           ref={canvasRef}
@@ -987,7 +932,6 @@ function WorkflowEditorContent() {
 
         </main>
 
-        {/* RIGHT SIDEBAR */}
 
         <aside className="w-72 border-l border-slate-800 p-5 shrink-0 overflow-y-auto hidden lg:block">
 
@@ -1178,9 +1122,6 @@ function WorkflowEditorContent() {
 
       </div>
 
-      {/* ================================================= */}
-      {/* RUN WORKFLOW MODAL */}
-      {/* ================================================= */}
 
       {showRunModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
@@ -1263,9 +1204,6 @@ function WorkflowEditorContent() {
         </div>
       )}
 
-      {/* ================================================= */}
-      {/* EXECUTION RESULT */}
-      {/* ================================================= */}
 
       {executionResult && (
         <div className="fixed bottom-5 right-5 z-40 w-[min(22rem,calc(100vw-2rem))] max-h-[70vh] overflow-y-auto rounded-xl border border-slate-700 bg-slate-900 p-5 shadow-2xl">

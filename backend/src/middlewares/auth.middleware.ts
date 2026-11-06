@@ -81,7 +81,7 @@ export const authMiddleware = async (req: Request,res: Response,next: NextFuncti
 
 
 export const validateRequest = (schema: z.ZodType) => { return (req: Request,res: Response,next: NextFunction): void => {
-    const result = schema.safeParse(req.body); // safeparse check data , if data valid then 400 response
+    const result = schema.safeParse(req.body); 
 
     if (!result.success) {
       res.status(400).json({

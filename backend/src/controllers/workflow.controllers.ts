@@ -5,9 +5,6 @@ import { Workflow } from "../models/workflow.model";
 import { ApiError } from "../utils/ApiError";
 import { ApiResponse } from "../utils/ApiResponse";
 
-// =====================================================
-// 1. TYPES
-// =====================================================
 
 interface WorkflowNodeData {
     label?: string;
@@ -45,9 +42,6 @@ interface ExecutionStep {
     result?: unknown;
 }
 
-// =====================================================
-// 2. CONDITION EVALUATION HELPER
-// =====================================================
 
 const evaluateCondition = (
     actualValue: unknown,
@@ -127,9 +121,6 @@ const evaluateCondition = (
     }
 };
 
-// =====================================================
-// 3. CREATE WORKFLOW
-// =====================================================
 
 export const createWorkflow = async (
     req: Request,
@@ -210,9 +201,6 @@ export const createWorkflow = async (
     }
 };
 
-// =====================================================
-// 4. GET SINGLE WORKFLOW
-// =====================================================
 
 export const getWorkflow = async (
     req: Request,
@@ -261,9 +249,6 @@ export const getWorkflow = async (
     }
 };
 
-// =====================================================
-// 5. GET ALL WORKFLOWS
-// =====================================================
 
 export const getAllworkflow = async (
     req: Request,
@@ -309,9 +294,6 @@ export const getAllworkflow = async (
     }
 };
 
-// =====================================================
-// 6. UPDATE WORKFLOW
-// =====================================================
 
 export const updateWorkflow = async (
     req: Request,
@@ -432,9 +414,6 @@ export const updateWorkflow = async (
     }
 };
 
-// =====================================================
-// 7. DELETE WORKFLOW
-// =====================================================
 
 export const deleteWorkflow = async (
     req: Request,
@@ -488,310 +467,360 @@ export const deleteWorkflow = async (
     }
 };
 
-// =====================================================
-// 8. EXECUTE WORKFLOW
-// =====================================================
+
 
 export const executeWorkflow = async (
-    req: Request,
-    res: Response
+  req: Request,
+  res: Response
 ): Promise<void> => {
+  try {
+    if (!req.user) {
+      throw new ApiError(401, "Unauthorized request");
+    }
 
-    try {
+    const workflow = await Workflow.findOne({
+      _id: req.params.id,
+      userId: req.user._id,
+      isDeleted: false,
+    });
 
-        // -----------------------------------------
-        // AUTHENTICATION
-        // -----------------------------------------
+    if (!workflow) {
+      throw new ApiError(404, "Workflow not found");
+    }
 
-        if (!req.user) {
-            throw new ApiError(401, "Unauthorized request");
-        }
+    const nodes = workflow.nodes as unknown as {
+      id: string;
+      type: "trigger" | "condition" | "action";
+      data: Record<string, unknown>;
+    }[];
 
-        // -----------------------------------------
-        // FETCH WORKFLOW
-        // -----------------------------------------
+    const edges = workflow.edges as unknown as {
+      id: string;
+      source: string;
+      target: string;
+      sourceHandle?: string | null;
+      targetHandle?: string | null;
+      label?: string;
+    }[];
 
-        const workflow = await Workflow.findOne({
-            _id: req.params.id,
-            userId: req.user._id,
-            isDeleted: false,
-        });
+    if (nodes.length === 0) {
+      throw new ApiError(400, "Workflow has no nodes");
+    }
 
-        if (!workflow) {
-            throw new ApiError(404, "Workflow not found");
-        }
+    if (edges.length === 0) {
+      throw new ApiError(400, "Workflow has no connections");
+    }
 
-        const nodes =
-            workflow.nodes as unknown as WorkflowNodeItem[];
+    const triggerNodes = nodes.filter(
+      (node) => node.type === "trigger"
+    );
 
-        const edges =
-            workflow.edges as unknown as WorkflowEdgeItem[];
+    if (triggerNodes.length !== 1) {
+      throw new ApiError(
+        400,
+        "Workflow must have exactly one trigger node"
+      );
+    }
 
-        // -----------------------------------------
-        // VALIDATE WORKFLOW
-        // -----------------------------------------
+    const inputData = req.body?.inputData;
 
-        if (!nodes.length) {
-            throw new ApiError(400, "Workflow has no nodes");
-        }
+    if (
+      !inputData ||
+      typeof inputData !== "object" ||
+      Array.isArray(inputData)
+    ) {
+      throw new ApiError(
+        400,
+        "Please provide inputData as an object"
+      );
+    }
 
-        if (!edges.length) {
-            throw new ApiError(400, "Workflow has no connections");
-        }
+    const evaluateCondition = (
+      actualValue: unknown,
+      operator: string,
+      expectedValue: unknown
+    ): boolean => {
+      const op = operator.toLowerCase().trim();
 
-        const triggerNodes = nodes.filter(
-            (node) => node.type === "trigger"
+      const actualNumber = Number(actualValue);
+      const expectedNumber = Number(expectedValue);
+
+      const bothNumeric =
+        actualValue !== "" &&
+        expectedValue !== "" &&
+        Number.isFinite(actualNumber) &&
+        Number.isFinite(expectedNumber);
+
+      const left = bothNumeric
+        ? actualNumber
+        : String(actualValue).toLowerCase();
+
+      const right = bothNumeric
+        ? expectedNumber
+        : String(expectedValue).toLowerCase();
+
+      switch (op) {
+        case ">":
+        case "greater than":
+        case "greater than (>)":
+          return left > right;
+
+        case ">=":
+        case "greater than or equal to":
+        case "greater than or equal to (>=)":
+          return left >= right;
+
+        case "<":
+        case "less than":
+        case "less than (<)":
+          return left < right;
+
+        case "<=":
+        case "less than or equal to":
+        case "less than or equal to (<=)":
+          return left <= right;
+
+        case "==":
+        case "===":
+        case "equal":
+        case "equal to":
+        case "equal to (==)":
+          return left === right;
+
+        case "!=":
+        case "!==":
+        case "not equal":
+        case "not equal to":
+        case "not equal to (!=)":
+          return left !== right;
+
+        default:
+          throw new ApiError(
+            400,
+            `Unsupported condition operator: ${operator}`
+          );
+      }
+    };
+
+    const executedNodes: {
+      nodeId: string;
+      nodeName: string;
+      nodeType: string;
+      status: string;
+      result: unknown;
+    }[] = [];
+
+    const visitedNodes = new Set<string>();
+
+    let currentNodeId: string | null = triggerNodes[0].id;
+
+    const MAX_STEPS = 100;
+    let stepCount = 0;
+
+    while (currentNodeId !== null) {
+      stepCount++;
+
+      if (stepCount > MAX_STEPS) {
+        throw new ApiError(
+          400,
+          "Workflow exceeded maximum execution steps"
         );
+      }
 
-        if (triggerNodes.length !== 1) {
-            throw new ApiError(
-                400,
-                "Workflow must have exactly one trigger node"
-            );
-        }
+      if (visitedNodes.has(currentNodeId)) {
+        throw new ApiError(
+          400,
+          "Cycle detected in workflow"
+        );
+      }
 
-        // -----------------------------------------
-        // VALIDATE INPUT DATA
-        // -----------------------------------------
+      visitedNodes.add(currentNodeId);
 
-        const inputData = req.body?.inputData;
+      const currentNode = nodes.find(
+        (node) => node.id === currentNodeId
+      );
+
+      if (!currentNode) {
+        throw new ApiError(
+          400,
+          `Node not found: ${currentNodeId}`
+        );
+      }
+
+      const nodeType = currentNode.type;
+
+      const nodeName = String(
+        currentNode.data?.label ?? nodeType
+      );
+
+
+      if (nodeType === "trigger") {
+        executedNodes.push({
+          nodeId: currentNode.id,
+          nodeName,
+          nodeType,
+          status: "success",
+          result: "Workflow started successfully",
+        });
+      }
+
+
+      else if (nodeType === "condition") {
+        const field = currentNode.data?.field;
+        const operator = currentNode.data?.operator;
+        const expectedValue = currentNode.data?.value;
 
         if (
-            !inputData ||
-            typeof inputData !== "object" ||
-            Array.isArray(inputData)
+          typeof field !== "string" ||
+          typeof operator !== "string" ||
+          expectedValue === undefined
         ) {
-            throw new ApiError(
-                400,
-                "Please provide inputData as an object"
-            );
+          throw new ApiError(
+            400,
+            `Condition settings are missing in ${nodeName}`
+          );
         }
 
-        // -----------------------------------------
-        // EXECUTION VARIABLES
-        // -----------------------------------------
+        const actualValue = (
+          inputData as Record<string, unknown>
+        )[field];
 
-        const executedNodes: ExecutionStep[] = [];
-
-        const visitedNodes = new Set<string>();
-
-        let currentNodeId: string | null =
-            triggerNodes[0].id;
-
-        const MAX_STEPS = 100;
-
-        let stepCount = 0;
-
-        // -----------------------------------------
-        // EXECUTION LOOP
-        // -----------------------------------------
-
-        while (currentNodeId !== null) {
-
-            stepCount++;
-
-            if (stepCount > MAX_STEPS) {
-                throw new ApiError(
-                    400,
-                    "Workflow exceeded maximum execution steps"
-                );
-            }
-
-            if (visitedNodes.has(currentNodeId)) {
-                throw new ApiError(
-                    400,
-                    "Cycle detected in workflow"
-                );
-            }
-
-            visitedNodes.add(currentNodeId);
-
-            const currentNode = nodes.find(
-                (node) => node.id === currentNodeId
-            );
-
-            if (!currentNode) {
-                throw new ApiError(
-                    400,
-                    `Node not found: ${currentNodeId}`
-                );
-            }
-
-            const nodeType = currentNode.type;
-
-            const nodeName =
-                currentNode.data?.label ?? nodeType;
-
-            // -------------------------------------
-            // TRIGGER NODE
-            // -------------------------------------
-
-            if (nodeType === "trigger") {
-
-                executedNodes.push({
-                    nodeId: currentNode.id,
-                    nodeName,
-                    nodeType,
-                    status: "success",
-                    result: "Workflow started successfully",
-                });
-
-            }
-
-            // -------------------------------------
-            // CONDITION NODE
-            // -------------------------------------
-
-            else if (nodeType === "condition") {
-
-                const field =
-                    currentNode.data?.field;
-
-                const operator =
-                    currentNode.data?.operator;
-
-                const expectedValue =
-                    currentNode.data?.value;
-
-                if (
-                    !field ||
-                    !operator ||
-                    expectedValue === undefined
-                ) {
-                    throw new ApiError(
-                        400,
-                        `Condition settings are missing in ${nodeName}`
-                    );
-                }
-
-                const actualValue = inputData[field];
-
-                if (actualValue === undefined) {
-                    throw new ApiError(
-                        400,
-                        `Input data missing for field: ${field}`
-                    );
-                }
-
-                const conditionResult =
-                    evaluateCondition(
-                        actualValue,
-                        operator,
-                        expectedValue
-                    );
-
-                executedNodes.push({
-                    nodeId: currentNode.id,
-                    nodeName,
-                    nodeType,
-                    status: "success",
-                    result: {
-                        field,
-                        actualValue,
-                        operator,
-                        expectedValue,
-                        conditionResult,
-                    },
-                });
-
-                // Select the correct branch
-                const selectedHandle =
-                    conditionResult ? "true" : "false";
-
-                const selectedEdge = edges.find(
-                    (edge) =>
-                        edge.source === currentNodeId &&
-                        edge.sourceHandle === selectedHandle
-                );
-
-                if (!selectedEdge) {
-                    throw new ApiError(
-                        400,
-                        `No ${selectedHandle} connection found for ${nodeName}`
-                    );
-                }
-
-                currentNodeId = selectedEdge.target;
-
-                continue;
-            }
-
-            // -------------------------------------
-            // ACTION NODE
-            // -------------------------------------
-
-            else if (nodeType === "action") {
-
-                executedNodes.push({
-                    nodeId: currentNode.id,
-                    nodeName,
-                    nodeType,
-                    status: "success",
-                    result: `${nodeName} action reached successfully`,
-                });
-
-            }
-
-            else {
-                throw new ApiError(
-                    400,
-                    `Unsupported node type: ${nodeType}`
-                );
-            }
-
-            // -------------------------------------
-            // FIND NEXT NODE
-            // -------------------------------------
-
-            const outgoingEdges = edges.filter(
-                (edge) => edge.source === currentNodeId
-            );
-
-            if (outgoingEdges.length > 1) {
-                throw new ApiError(
-                    400,
-                    `Multiple outgoing connections found for ${nodeName}`
-                );
-            }
-
-            currentNodeId =
-                outgoingEdges.length === 1
-                    ? outgoingEdges[0].target
-                    : null;
+        if (actualValue === undefined) {
+          throw new ApiError(
+            400,
+            `Input data missing for field: ${field}`
+          );
         }
 
-        // -----------------------------------------
-        // EXECUTION RESPONSE
-        // -----------------------------------------
-
-        res.status(200).json(
-            new ApiResponse(
-                200,
-                {
-                    workflowId: workflow._id,
-                    status: "completed",
-                    inputData,
-                    executedNodes,
-                    totalExecutedNodes: executedNodes.length,
-                },
-                "Workflow executed successfully"
-            )
+        const conditionResult = evaluateCondition(
+          actualValue,
+          operator,
+          expectedValue
         );
 
-    } catch (error) {
+        const selectedHandle = conditionResult
+          ? "true"
+          : "false";
 
-        const apiError =
-            error instanceof ApiError
-                ? error
-                : new ApiError(
-                    500,
-                    "Something went wrong while executing workflow"
-                );
-
-        res.status(apiError.statusCode).json({
-            statusCode: apiError.statusCode,
-            message: apiError.message,
-            success: false,
+        executedNodes.push({
+          nodeId: currentNode.id,
+          nodeName,
+          nodeType,
+          status: "success",
+          result: {
+            field,
+            actualValue,
+            operator,
+            expectedValue,
+            conditionResult,
+            selectedHandle,
+          },
         });
+
+        const selectedEdge = edges.find((edge) => {
+          if (edge.source !== currentNodeId) {
+            return false;
+          }
+
+          const handle = edge.sourceHandle?.toLowerCase();
+
+          const label = edge.label?.toLowerCase();
+
+          return (
+            handle === selectedHandle ||
+            (!handle && label === selectedHandle)
+          );
+        });
+
+        if (!selectedEdge) {
+          console.log("Condition:", nodeName);
+          console.log("Selected branch:", selectedHandle);
+
+          console.log(
+            "Available edges:",
+            JSON.stringify(
+              edges.filter(
+                (edge) => edge.source === currentNodeId
+              ),
+              null,
+              2
+            )
+          );
+
+          throw new ApiError(
+            400,
+            `No ${selectedHandle} connection found for ${nodeName}. Check sourceHandle in saved edges.`
+          );
+        }
+
+        currentNodeId = selectedEdge.target;
+
+        continue;
+      }
+
+
+      else if (nodeType === "action") {
+        executedNodes.push({
+          nodeId: currentNode.id,
+          nodeName,
+          nodeType,
+          status: "success",
+          result: `${nodeName} action reached successfully`,
+        });
+      }
+
+      else {
+        throw new ApiError(
+          400,
+          `Unsupported node type: ${nodeType}`
+        );
+      }
+
+
+      const outgoingEdges = edges.filter(
+        (edge) => edge.source === currentNodeId
+      );
+
+      if (outgoingEdges.length > 1) {
+        throw new ApiError(
+          400,
+          `Multiple outgoing connections found for ${nodeName}`
+        );
+      }
+
+      currentNodeId =
+        outgoingEdges.length === 1
+          ? outgoingEdges[0].target
+          : null;
     }
+
+    res.status(200).json(
+      new ApiResponse(
+        200,
+        {
+          workflowId: workflow._id,
+          status: "completed",
+          inputData,
+          executedNodes,
+          totalExecutedNodes: executedNodes.length,
+        },
+        "Workflow executed successfully"
+      )
+    );
+
+  } catch (error) {
+    const apiError =
+      error instanceof ApiError
+        ? error
+        : new ApiError(
+            500,
+            "Something went wrong while executing workflow"
+          );
+
+    res.status(apiError.statusCode).json({
+      statusCode: apiError.statusCode,
+      message: apiError.message,
+      success: false,
+    });
+  }
 };

@@ -26,8 +26,6 @@ app.use(express.json());
 app.use("/api/user", userRoutes);
 app.use("/api/workflows", workflowRoutes);
 
-// Liveness probe for CI, load balancers and the frontend to verify the API
-// is up without touching MongoDB.
 app.get("/api/health", (_req: Request, res: Response) => {
   res.status(200).json({
     statusCode: 200,
@@ -41,8 +39,6 @@ app.get("/api/health", (_req: Request, res: Response) => {
   });
 });
 
-// Anything under /api that did not match a route returns JSON rather than
-// Express' default HTML 404 page.
 app.use("/api", (_req: Request, res: Response) => {
   res.status(404).json({
     statusCode: 404,

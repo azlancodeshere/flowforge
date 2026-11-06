@@ -37,7 +37,6 @@ export default function LoginPage() {
             setUser(loggedInUser)
             setIsAuthenticated(true)
 
-            //router.push("/")
            router.replace("/")
 
 

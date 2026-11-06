@@ -32,7 +32,6 @@ export default function ConditionNode({
           : "border-violet-500"
       }`}
     >
-      {/* Incoming connection */}
       <Handle
         type="target"
         position={Position.Top}
@@ -57,7 +56,6 @@ export default function ConditionNode({
         </div>
       </div>
 
-      {/* True output */}
       <div className="absolute -right-[65px] top-[35%] flex items-center gap-2">
         <span className="text-xs font-semibold text-emerald-400">
           True
@@ -71,7 +69,6 @@ export default function ConditionNode({
         />
       </div>
 
-      {/* False output */}
       <div className="absolute -right-[65px] top-[70%] flex items-center gap-2">
         <span className="text-xs font-semibold text-red-400">
           False
