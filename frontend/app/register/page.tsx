@@ -57,7 +57,7 @@ const handleSubmit = async (e:SyntheticEvent<HTMLFormElement>) =>{
 
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#080B16] px-5 py-12 text-white">
+    <main className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-[#080B16] px-4 py-10 text-white sm:px-5 sm:py-16">
       <div className="pointer-events-none absolute left-1/4 top-0 h-80 w-80 rounded-full bg-blue-600/15 blur-[120px]" />
       <div className="pointer-events-none absolute bottom-0 right-1/4 h-80 w-80 rounded-full bg-purple-600/15 blur-[120px]" />
 
@@ -67,7 +67,7 @@ const handleSubmit = async (e:SyntheticEvent<HTMLFormElement>) =>{
             F
           </div>
 
-          <h1 className="text-3xl font-bold tracking-tight">
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
             Create your account
           </h1>
 

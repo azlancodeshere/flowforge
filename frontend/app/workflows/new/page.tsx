@@ -60,7 +60,7 @@ export default function NewWorkflowPage() {
 
 
   return (
-    <main className="min-h-screen bg-slate-50 px-5 py-10 text-slate-900 sm:px-8">
+    <main className="min-h-dvh bg-slate-50 px-4 py-8 text-slate-900 sm:px-8 sm:py-10">
       <div className="mx-auto max-w-3xl">
         <Link
           href="/dashboard"

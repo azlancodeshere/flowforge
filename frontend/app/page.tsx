@@ -248,14 +248,14 @@ export default function HomePage() {
         <div className="pointer-events-none absolute -right-32 -top-16 -z-10 h-[540px] w-[650px] rounded-full bg-gradient-to-br from-violet-200/70 via-blue-100/70 to-indigo-100/50 blur-3xl" />
         <div className="pointer-events-none absolute -left-40 top-40 -z-10 h-80 w-80 rounded-full bg-sky-100/70 blur-3xl" />
 
-        <div className="mx-auto grid max-w-7xl items-center gap-12 px-5 pb-12 pt-14 sm:px-8 sm:pb-16 sm:pt-20 lg:grid-cols-[0.95fr_1.05fr] lg:gap-12 lg:px-10 lg:pb-16">
+        <div className="mx-auto grid max-w-7xl items-center gap-10 px-5 pb-10 pt-10 sm:gap-12 sm:px-8 sm:pb-16 sm:pt-20 lg:grid-cols-[0.95fr_1.05fr] lg:gap-12 lg:px-10 lg:pb-16">
           <div className="max-w-2xl">
             <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-indigo-100 bg-indigo-50/90 px-4 py-2 text-xs font-semibold text-indigo-700 sm:text-sm">
               <span className="text-base">✧</span>
               Build. Automate. Scale.
             </div>
 
-            <h1 className="text-4xl font-extrabold leading-[1.1] tracking-tight text-slate-950 sm:text-5xl lg:text-[64px]">
+            <h1 className="text-[2.1rem] font-extrabold leading-[1.1] tracking-tight text-slate-950 sm:text-5xl lg:text-[64px]">
               Build Powerful{" "}
               <span className="bg-gradient-to-r from-violet-600 via-indigo-600 to-blue-500 bg-clip-text text-transparent">
                 Workflows
@@ -272,14 +272,14 @@ export default function HomePage() {
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Link
                 href={isAuthenticated ? "/dashboard" : "/login"}
-                className="inline-flex items-center justify-center gap-3 rounded-xl bg-indigo-600 px-7 py-4 text-sm font-bold text-white shadow-xl shadow-indigo-200 transition hover:-translate-y-0.5 hover:bg-indigo-700"
+                className="inline-flex items-center justify-center gap-3 rounded-xl bg-indigo-600 px-6 py-3.5 text-sm font-bold text-white shadow-xl shadow-indigo-200 transition hover:-translate-y-0.5 hover:bg-indigo-700 sm:px-7 sm:py-4"
               >
                 Get Started Free
                 <span className="text-lg">→</span>
               </Link>
               <a
                 href="#how-it-works"
-                className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white/80 px-7 py-4 text-sm font-bold text-slate-800 shadow-sm transition hover:border-indigo-200 hover:bg-indigo-50"
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white/80 px-6 py-3.5 text-sm font-bold text-slate-800 shadow-sm transition hover:border-indigo-200 hover:bg-indigo-50 sm:px-7 sm:py-4"
               >
                 <span className="flex h-5 w-5 items-center justify-center rounded-full border-2 border-indigo-500 text-[9px] text-indigo-600">
                   ▶
@@ -307,8 +307,8 @@ export default function HomePage() {
       <section className="border-y border-slate-100 bg-white/80">
         <div className="mx-auto grid max-w-7xl grid-cols-2 gap-x-5 gap-y-7 px-5 py-9 sm:px-8 md:grid-cols-4 lg:px-10">
           {benefits.map((item) => (
-            <div key={item.title} className="flex items-center gap-3">
-              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-100 to-blue-50 text-2xl font-semibold text-indigo-600">
+            <div key={item.title} className="flex items-center gap-2 sm:gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-100 to-blue-50 text-xl font-semibold text-indigo-600 sm:h-12 sm:w-12 sm:text-2xl">
                 {item.icon}
               </span>
               <div>
@@ -343,7 +343,7 @@ export default function HomePage() {
             {features.map((feature) => (
               <article
                 key={feature.title}
-                className="group rounded-2xl border border-slate-200/80 bg-white p-6 transition duration-300 hover:-translate-y-1 hover:border-indigo-200 hover:shadow-xl hover:shadow-indigo-900/5"
+                className="group rounded-2xl border border-slate-200/80 bg-white p-5 transition duration-300 hover:-translate-y-1 hover:border-indigo-200 hover:shadow-xl hover:shadow-indigo-900/5 sm:p-6"
               >
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-100 to-blue-50 text-2xl font-semibold text-indigo-600 transition group-hover:from-indigo-600 group-hover:to-violet-600 group-hover:text-white">
                   {feature.icon}

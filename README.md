@@ -11,7 +11,6 @@ Build, connect, and automate complex tasks with a high-performance node-based ca
 [![Express](https://img.shields.io/badge/Express-5.3-000000?logo=express&logoColor=white)](https://expressjs.com/)
 [![MongoDB](https://img.shields.io/badge/MongoDB-Mongoose-47A248?logo=mongodb&logoColor=white)](https://www.mongodb.com/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v4-38B2AC?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 </div>
 
@@ -113,7 +112,6 @@ flowforge/
 │   ├── package.json
 │   └── tsconfig.json
 ├── .gitignore                   # Monorepo-wide git exclusion rules
-├── LICENSE                      # MIT license terms
 ├── package.json                 # Monorepo root scripts & workspaces
 └── README.md                    # Project documentation
 ```
@@ -280,8 +278,3 @@ status code.
 - **Automated Quality Gate**: GitHub Actions runs on all commits and PRs to `main`, running ESLint, typechecking both workspaces, executing the backend test suite and verifying production builds.
 - **Unit Tests**: Backend helpers and Zod validators are covered by a dependency-free `node:test` suite.
 
----
-
-## 📄 License
-
-This project is licensed under the [MIT License](LICENSE).

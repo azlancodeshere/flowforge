@@ -57,12 +57,12 @@ const quickActions = [
 
 export default function DashboardPage() {
   return (
-    <main className="min-h-screen bg-slate-50 text-slate-900">
+    <main className="min-h-dvh bg-slate-50 text-slate-900">
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/90 backdrop-blur-xl">
        <Navbar/>
       </header>
 
-      <div className="mx-auto max-w-7xl px-5 py-8 sm:px-8 sm:py-10">
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-8 sm:py-10">
         <section className="flex flex-col justify-between gap-5 sm:flex-row sm:items-center">
           <div>
             <p className="text-sm font-semibold text-indigo-600">

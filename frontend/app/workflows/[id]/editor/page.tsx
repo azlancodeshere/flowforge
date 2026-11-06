@@ -96,7 +96,7 @@ export default function WorkflowEditorPage() {
   return (
     <Suspense
       fallback={
-        <div className="h-screen bg-[#0b1120] text-white flex items-center justify-center">
+        <div className="flex h-dvh items-center justify-center bg-[#0b1120] text-white">
           Loading Workflow Editor...
         </div>
       }
@@ -138,6 +138,13 @@ function WorkflowEditorContent() {
     useState<any>(null);
 
   const [executionError, setExecutionError] = useState("");
+
+  const [showPalette, setShowPalette] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+
+  const isWideLayout = () =>
+    typeof window !== "undefined" &&
+    window.matchMedia("(min-width: 1024px)").matches;
 
 
   useEffect(() => {
@@ -341,6 +348,10 @@ function WorkflowEditorContent() {
     setNodes((oldNodes) => [...oldNodes, newNode]);
     setSelectedNode(newNode);
     setSaveMessage("");
+
+    if (!isWideLayout()) {
+      setShowPalette(false);
+    }
   };
 
 
@@ -464,6 +475,11 @@ function WorkflowEditorContent() {
     node: WorkflowNode
   ) => {
     setSelectedNode(node);
+
+    if (!isWideLayout()) {
+      setShowSettings(true);
+      setShowPalette(false);
+    }
   };
 
 
@@ -522,6 +538,10 @@ function WorkflowEditorContent() {
 
     setSelectedNode(null);
     setSaveMessage("");
+
+    if (!isWideLayout()) {
+      setShowSettings(false);
+    }
   };
 
 
@@ -685,35 +705,46 @@ function WorkflowEditorContent() {
 
 
   return (
-    <div className="h-screen bg-[#0b1120] text-white flex flex-col overflow-hidden">
+    <div className="flex h-dvh min-h-dvh flex-col overflow-hidden bg-[#0b1120] text-white">
 
 
-      <header className="h-16 border-b border-slate-800 flex items-center justify-between px-6 shrink-0">
+      <header className="flex min-h-16 shrink-0 flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-slate-800 px-3 py-2 sm:px-5 lg:px-6">
 
-        <div className="flex items-center gap-5">
+        <div className="flex min-w-0 items-center gap-3 sm:gap-5">
+
+          <button
+            type="button"
+            onClick={() => setShowPalette((open) => !open)}
+            aria-label="Toggle node palette"
+            aria-expanded={showPalette}
+            className="flex shrink-0 items-center gap-2 rounded-lg border border-slate-700 px-2.5 py-2 text-xs font-medium text-slate-300 transition hover:bg-slate-800 lg:hidden"
+          >
+            <span aria-hidden="true">☰</span>
+            <span className="hidden sm:inline">Nodes</span>
+          </button>
 
           <Link
             href="/workflows/all"
-            className="text-slate-400 hover:text-white text-sm"
+            className="shrink-0 text-sm text-slate-400 hover:text-white"
           >
-            ← Back
+            ←<span className="hidden sm:inline"> Back</span>
           </Link>
 
-          <div className="h-7 w-px bg-slate-700" />
+          <div className="hidden h-7 w-px bg-slate-700 sm:block" />
 
-          <div>
-            <h1 className="font-semibold text-sm">
+          <div className="min-w-0">
+            <h1 className="truncate text-sm font-semibold">
               Untitled Workflow
             </h1>
 
-            <p className="text-xs text-slate-500">
+            <p className="truncate text-xs text-slate-500">
               Workflow Editor
             </p>
           </div>
 
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
 
           <div className="hidden sm:block text-right">
 
@@ -739,7 +770,7 @@ function WorkflowEditorContent() {
             type="button"
             onClick={handleSaveWorkflow}
             disabled={isSaving || isLoadingWorkflow}
-            className="px-4 py-2 text-sm rounded-lg border border-slate-700 hover:bg-slate-800 disabled:opacity-50"
+            className="rounded-lg border border-slate-700 px-3 py-2 text-sm hover:bg-slate-800 disabled:opacity-50 sm:px-4"
           >
             {isLoadingWorkflow
               ? "Loading..."
@@ -760,9 +791,25 @@ function WorkflowEditorContent() {
               isSaving ||
               isExecuting
             }
-            className="px-5 py-2 text-sm rounded-lg bg-violet-600 hover:bg-violet-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            className="whitespace-nowrap rounded-lg bg-violet-600 px-3 py-2 text-sm font-medium hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-50 sm:px-5"
           >
-            ▶ Run Workflow
+            <span>▶</span>
+            <span className="hidden sm:inline">
+              {" "}
+              Run Workflow
+            </span>
+            <span className="sm:hidden"> Run</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setShowSettings((open) => !open)}
+            aria-label="Toggle node settings"
+            aria-expanded={showSettings}
+            className="flex items-center gap-2 rounded-lg border border-slate-700 px-2.5 py-2 text-xs font-medium text-slate-300 transition hover:bg-slate-800 lg:hidden"
+          >
+            <span aria-hidden="true">⚙</span>
+            <span className="hidden md:inline">Settings</span>
           </button>
 
         </div>
@@ -772,8 +819,40 @@ function WorkflowEditorContent() {
 
       <div className="flex flex-1 min-h-0">
 
+        {(showPalette || showSettings) && (
+          <div
+            onClick={() => {
+              setShowPalette(false);
+              setShowSettings(false);
+            }}
+            className="fixed inset-0 z-30 bg-black/60 lg:hidden"
+            aria-hidden="true"
+          />
+        )}
 
-        <aside className="w-64 border-r border-slate-800 p-5 shrink-0 overflow-y-auto">
+
+        <aside
+          className={`overflow-y-auto border-slate-800 bg-[#0b1120] p-5 shadow-2xl lg:z-auto lg:static lg:block lg:max-w-none lg:w-64 lg:shrink-0 lg:border-r lg:shadow-none ${
+            showPalette
+              ? "fixed inset-y-0 left-0 z-40 block w-72 max-w-[85vw] border-r"
+              : "hidden"
+          }`}
+        >
+
+          <div className="mb-4 flex items-center justify-between gap-3 lg:hidden">
+            <span className="text-xs font-medium uppercase tracking-wider text-slate-500">
+              Add nodes
+            </span>
+
+            <button
+              type="button"
+              onClick={() => setShowPalette(false)}
+              aria-label="Close node palette"
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-800 hover:text-white"
+            >
+              ✕
+            </button>
+          </div>
 
           <h2 className="text-sm font-semibold mb-1">
             Workflow Nodes
@@ -895,7 +974,7 @@ function WorkflowEditorContent() {
             <MiniMap
               nodeColor="#8b5cf6"
               maskColor="rgba(15, 23, 42, 0.7)"
-              className="bg-slate-900 border-slate-700"
+              className="hidden border-slate-700 bg-slate-900 md:block"
             />
 
           </ReactFlow>
@@ -922,7 +1001,7 @@ function WorkflowEditorContent() {
                 </h3>
 
                 <p className="text-xs text-slate-500 mt-2">
-                  Add nodes from the left sidebar to get started.
+                  Add nodes from the Nodes panel to get started.
                 </p>
 
               </div>
@@ -933,7 +1012,28 @@ function WorkflowEditorContent() {
         </main>
 
 
-        <aside className="w-72 border-l border-slate-800 p-5 shrink-0 overflow-y-auto hidden lg:block">
+        <aside
+          className={`overflow-y-auto border-slate-800 bg-[#0b1120] p-5 shadow-2xl lg:z-auto lg:static lg:block lg:max-w-none lg:w-72 lg:shrink-0 lg:border-l lg:shadow-none ${
+            showSettings
+              ? "fixed inset-y-0 right-0 z-40 block w-80 max-w-[85vw] border-l"
+              : "hidden"
+          }`}
+        >
+
+          <div className="mb-4 flex items-center justify-between gap-3 lg:hidden">
+            <span className="text-xs font-medium uppercase tracking-wider text-slate-500">
+              Node settings
+            </span>
+
+            <button
+              type="button"
+              onClick={() => setShowSettings(false)}
+              aria-label="Close node settings"
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-800 hover:text-white"
+            >
+              ✕
+            </button>
+          </div>
 
           <h2 className="text-sm font-semibold">
             Node Settings
@@ -1126,7 +1226,7 @@ function WorkflowEditorContent() {
       {showRunModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
 
-          <div className="w-full max-w-md rounded-xl border border-slate-700 bg-slate-900 p-6 shadow-2xl">
+          <div className="max-h-[90dvh] w-full max-w-md overflow-y-auto rounded-xl border border-slate-700 bg-slate-900 p-5 shadow-2xl sm:p-6">
 
             <div className="flex items-start justify-between gap-4">
 
@@ -1206,7 +1306,7 @@ function WorkflowEditorContent() {
 
 
       {executionResult && (
-        <div className="fixed bottom-5 right-5 z-40 w-[min(22rem,calc(100vw-2rem))] max-h-[70vh] overflow-y-auto rounded-xl border border-slate-700 bg-slate-900 p-5 shadow-2xl">
+        <div className="fixed bottom-4 left-4 right-4 z-40 max-h-[60vh] overflow-y-auto rounded-xl border border-slate-700 bg-slate-900 p-4 shadow-2xl sm:bottom-5 sm:left-auto sm:right-5 sm:w-[min(22rem,calc(100vw-2rem))] sm:p-5">
 
           <div className="flex items-center justify-between gap-3">
 
