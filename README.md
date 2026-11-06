@@ -2,7 +2,7 @@
 
 # ⚡ FlowForge
 
-**A modern, production-grade visual workflow automation platform.**  
+**A modern, production-grade visual workflow automation platform.**
 Build, connect, and automate complex tasks with a high-performance node-based canvas and secure authentication.
 
 [![CI Pipeline](https://github.com/azlancodeshere/flowforge/actions/workflows/ci.yml/badge.svg)](https://github.com/azlancodeshere/flowforge/actions)
@@ -44,17 +44,7 @@ Build, connect, and automate complex tasks with a high-performance node-based ca
 
 ---
 
-## 🛠 Architecture & Tech Stack
 
-```mermaid
-graph TD
-    Client["Next.js 16 Web Client<br/>(React 19, Tailwind CSS v4, XYFlow)"]
-    API["Express 5 REST API<br/>(TypeScript, Zod, JWT)"]
-    DB[("MongoDB<br/>(Mongoose ODM)")]
-
-    Client -->|HTTP / Credentials (Cookies)| API
-    API -->|Mongoose Queries| DB
-```
 
 ### Frontend
 - **Framework**: Next.js 16 (App Router, Turbopack, Partial Prerendering)
