@@ -2,8 +2,11 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useParams } from "next/navigation";
+import { Suspense, useEffect, useRef, useState } from "react";
 import type { DragEvent, MouseEvent } from "react";
+
+import api from "@/lib/api";
 
 import {
   ReactFlow,
@@ -27,12 +30,14 @@ import type {
 
 import "@xyflow/react/dist/style.css";
 
-// ---------------- TYPES ----------------
+// -----------------------------------------
+// 1. TYPES
+// -----------------------------------------
 
 type WorkflowNodeData = {
   label: string;
   icon: string;
-  category: string;
+  category: "trigger" | "condition" | "action";
   description: string;
   field?: string;
   operator?: string;
@@ -42,14 +47,16 @@ type WorkflowNodeData = {
 type WorkflowNode = Node<WorkflowNodeData>;
 
 type NodeItem = {
-  category: string;
+  category: "trigger" | "condition" | "action";
   icon: string;
   title: string;
   description: string;
   border: string;
 };
 
-// ---------------- INITIAL DATA ----------------
+// -----------------------------------------
+// 2. INITIAL DATA
+// -----------------------------------------
 
 const initialNodes: WorkflowNode[] = [];
 const initialEdges: Edge[] = [];
@@ -88,7 +95,33 @@ const nodeItems: NodeItem[] = [
 const inputClass =
   "w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-violet-500 text-white";
 
+// -----------------------------------------
+// 3. PARENT COMPONENT
+// -----------------------------------------
+
 export default function WorkflowEditorPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="h-screen bg-[#0b1120] text-white flex items-center justify-center">
+          Loading Workflow Editor...
+        </div>
+      }
+    >
+      <WorkflowEditorContent />
+    </Suspense>
+  );
+}
+
+// -----------------------------------------
+// 4. MAIN EDITOR COMPONENT
+// -----------------------------------------
+
+function WorkflowEditorContent() {
+  // Get workflow ID from URL
+  const params = useParams<{ id: string }>();
+  const workflowId = params.id;
+
   // Canvas reference
   const canvasRef = useRef<HTMLDivElement>(null);
 
@@ -97,24 +130,191 @@ export default function WorkflowEditorPage() {
     useState<ReactFlowInstance | null>(null);
 
   // Nodes state
-  const [nodes, setNodes] = useState<WorkflowNode[]>(initialNodes);
+  const [nodes, setNodes] =
+    useState<WorkflowNode[]>(initialNodes);
 
   // Edges state
-  const [edges, setEdges] = useState<Edge[]>(initialEdges);
+  const [edges, setEdges] =
+    useState<Edge[]>(initialEdges);
 
-  // Selected node state
+  // Selected node
   const [selectedNode, setSelectedNode] =
     useState<WorkflowNode | null>(null);
 
-  // ---------------- ADD NODE ----------------
+  // Save states
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState("");
+  const [saveError, setSaveError] = useState(false);
+
+  // Loading state
+  const [isLoadingWorkflow, setIsLoadingWorkflow] =
+    useState(true);
+
+  // -----------------------------------------
+  // 5. LOAD WORKFLOW FROM BACKEND
+  // -----------------------------------------
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadWorkflow = async () => {
+      if (!workflowId || workflowId === "undefined") {
+        setIsLoadingWorkflow(false);
+        setSaveError(true);
+        setSaveMessage("Workflow ID is missing.");
+        return;
+      }
+
+      try {
+        setIsLoadingWorkflow(true);
+
+        const response = await api.get(
+          `/workflows/get-singleWorkflow/${workflowId}`
+        );
+
+        // Get workflow from API response
+        const responseData = response.data?.data;
+
+        const workflow =
+          responseData?.workflow ?? responseData;
+
+        if (
+          !workflow ||
+          !Array.isArray(workflow.nodes) ||
+          !Array.isArray(workflow.edges)
+        ) {
+          throw new Error(
+            "Invalid workflow response from server."
+          );
+        }
+
+        // Restore saved nodes
+        const restoredNodes: WorkflowNode[] =
+          workflow.nodes.map((savedNode: any) => {
+            const category =
+              savedNode.data?.category ?? savedNode.type;
+
+            const border =
+              category === "trigger"
+                ? "#3b82f6"
+                : category === "condition"
+                  ? "#8b5cf6"
+                  : "#10b981";
+
+            return {
+              id: savedNode.id,
+              type: "default",
+
+              position: savedNode.position,
+
+              data: {
+                ...savedNode.data,
+
+                category,
+
+                label:
+                  savedNode.data?.label ??
+                  (category === "trigger"
+                    ? "Manual Trigger"
+                    : category === "condition"
+                      ? "Condition"
+                      : "Action"),
+
+                icon:
+                  savedNode.data?.icon ??
+                  (category === "trigger"
+                    ? "⚡"
+                    : category === "condition"
+                      ? "◇"
+                      : "✉"),
+
+                description:
+                  savedNode.data?.description ?? "",
+              },
+
+              style: {
+                background: "#1e293b",
+                color: "#ffffff",
+                border: `1px solid ${border}`,
+                borderRadius: "12px",
+                padding: "14px",
+                width: 190,
+              },
+            };
+          });
+
+        // Restore saved edges
+        const restoredEdges: Edge[] =
+          workflow.edges.map(
+            (savedEdge: any, index: number) => ({
+              id: savedEdge.id ?? `edge-${index}`,
+              source: savedEdge.source,
+              target: savedEdge.target,
+
+              ...(savedEdge.label
+                ? { label: savedEdge.label }
+                : {}),
+
+              animated: true,
+
+              style: {
+                stroke: "#8b5cf6",
+                strokeWidth: 2,
+                strokeDasharray: "2 6",
+                strokeLinecap: "round",
+              },
+            })
+          );
+
+        if (isMounted) {
+          setNodes(restoredNodes);
+          setEdges(restoredEdges);
+          setSelectedNode(null);
+          setSaveMessage("");
+          setSaveError(false);
+
+          console.log("Workflow loaded:", workflow);
+        }
+      } catch (error) {
+        console.error(
+          "Workflow loading failed:",
+          error
+        );
+
+        if (isMounted) {
+          setSaveError(true);
+          setSaveMessage(
+            "Could not load workflow. Please refresh or try again."
+          );
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingWorkflow(false);
+        }
+      }
+    };
+
+    loadWorkflow();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [workflowId]);
+
+  // -----------------------------------------
+  // 6. ADD NODE
+  // -----------------------------------------
 
   const addNodeToCanvas = (
     item: NodeItem,
     position?: { x: number; y: number }
   ) => {
-    if (!reactFlowInstance || !canvasRef.current) return;
+    if (!reactFlowInstance || !canvasRef.current) {
+      return;
+    }
 
-    const bounds = canvasRef.current.getBoundingClientRect();
+    const bounds =
+      canvasRef.current.getBoundingClientRect();
 
     const nodePosition =
       position ||
@@ -127,13 +327,13 @@ export default function WorkflowEditorPage() {
       id: crypto.randomUUID(),
       type: "default",
       position: nodePosition,
+
       data: {
         label: item.title,
         icon: item.icon,
         category: item.category,
         description: item.description,
 
-        // Default condition settings
         ...(item.category === "condition"
           ? {
               field: "Marks",
@@ -142,6 +342,7 @@ export default function WorkflowEditorPage() {
             }
           : {}),
       },
+
       style: {
         background: "#1e293b",
         color: "#ffffff",
@@ -152,58 +353,101 @@ export default function WorkflowEditorPage() {
       },
     };
 
-    setNodes((oldNodes) => [...oldNodes, newNode]);
+    setNodes((oldNodes) => [
+      ...oldNodes,
+      newNode,
+    ]);
+
     setSelectedNode(newNode);
+    setSaveMessage("");
   };
 
-  // ---------------- DRAG AND DROP ----------------
+  // -----------------------------------------
+  // 7. DRAG START
+  // -----------------------------------------
 
   const handleDragStart = (
     event: DragEvent<HTMLDivElement>,
     item: NodeItem
   ) => {
-    event.dataTransfer.setData("nodeTitle", item.title);
+    event.dataTransfer.setData(
+      "nodeTitle",
+      item.title
+    );
+
     event.dataTransfer.effectAllowed = "move";
   };
 
-  const handleDragOver = (event: DragEvent<HTMLDivElement>) => {
+  // -----------------------------------------
+  // 8. DRAG OVER
+  // -----------------------------------------
+
+  const handleDragOver = (
+    event: DragEvent<HTMLDivElement>
+  ) => {
     event.preventDefault();
     event.dataTransfer.dropEffect = "move";
   };
 
-  const handleDrop = (event: DragEvent<HTMLDivElement>) => {
+  // -----------------------------------------
+  // 9. DROP NODE ON CANVAS
+  // -----------------------------------------
+
+  const handleDrop = (
+    event: DragEvent<HTMLDivElement>
+  ) => {
     event.preventDefault();
 
     if (!reactFlowInstance) return;
 
-    const title = event.dataTransfer.getData("nodeTitle");
-    const item = nodeItems.find((node) => node.title === title);
+    const title =
+      event.dataTransfer.getData("nodeTitle");
+
+    const item = nodeItems.find(
+      (node) => node.title === title
+    );
 
     if (!item) return;
 
-    const position = reactFlowInstance.screenToFlowPosition({
-      x: event.clientX,
-      y: event.clientY,
-    });
+    const position =
+      reactFlowInstance.screenToFlowPosition({
+        x: event.clientX,
+        y: event.clientY,
+      });
 
     addNodeToCanvas(item, position);
   };
 
-  // ---------------- NODE AND EDGE CHANGES ----------------
+  // -----------------------------------------
+  // 10. NODE CHANGES
+  // -----------------------------------------
 
-  const handleNodesChange = (changes: NodeChange<WorkflowNode>[]) => {
+  const handleNodesChange = (
+    changes: NodeChange<WorkflowNode>[]
+  ) => {
     setNodes((oldNodes) =>
-      applyNodeChanges(changes, oldNodes) as WorkflowNode[]
+      applyNodeChanges(
+        changes,
+        oldNodes
+      ) as WorkflowNode[]
     );
   };
 
-  const handleEdgesChange = (changes: EdgeChange[]) => {
+  // -----------------------------------------
+  // 11. EDGE CHANGES
+  // -----------------------------------------
+
+  const handleEdgesChange = (
+    changes: EdgeChange[]
+  ) => {
     setEdges((oldEdges) =>
       applyEdgeChanges(changes, oldEdges)
     );
   };
 
-  // ---------------- CONNECT NODES ----------------
+  // -----------------------------------------
+  // 12. CONNECT NODES
+  // -----------------------------------------
 
   const handleConnect = (params: Connection) => {
     setEdges((oldEdges) =>
@@ -211,6 +455,7 @@ export default function WorkflowEditorPage() {
         {
           ...params,
           animated: true,
+
           style: {
             stroke: "#8b5cf6",
             strokeWidth: 2,
@@ -221,9 +466,13 @@ export default function WorkflowEditorPage() {
         oldEdges
       )
     );
+
+    setSaveMessage("");
   };
 
-  // ---------------- SELECT NODE ----------------
+  // -----------------------------------------
+  // 13. SELECT NODE
+  // -----------------------------------------
 
   const handleNodeClick = (
     _event: MouseEvent,
@@ -232,7 +481,9 @@ export default function WorkflowEditorPage() {
     setSelectedNode(node);
   };
 
-  // ---------------- UPDATE NODE DATA ----------------
+  // -----------------------------------------
+  // 14. UPDATE NODE DATA
+  // -----------------------------------------
 
   const updateSelectedNodeData = (
     key: keyof WorkflowNodeData,
@@ -240,12 +491,12 @@ export default function WorkflowEditorPage() {
   ) => {
     if (!selectedNode) return;
 
-    // Update canvas node
     setNodes((oldNodes) =>
       oldNodes.map((node) => {
         if (node.id === selectedNode.id) {
           return {
             ...node,
+
             data: {
               ...node.data,
               [key]: value,
@@ -257,27 +508,33 @@ export default function WorkflowEditorPage() {
       })
     );
 
-    // Update selected node
     setSelectedNode((oldNode) => {
       if (!oldNode) return null;
 
       return {
         ...oldNode,
+
         data: {
           ...oldNode.data,
           [key]: value,
         },
       };
     });
+
+    setSaveMessage("");
   };
 
-  // ---------------- DELETE NODE ----------------
+  // -----------------------------------------
+  // 15. DELETE NODE
+  // -----------------------------------------
 
   const deleteSelectedNode = () => {
     if (!selectedNode) return;
 
     setNodes((oldNodes) =>
-      oldNodes.filter((node) => node.id !== selectedNode.id)
+      oldNodes.filter(
+        (node) => node.id !== selectedNode.id
+      )
     );
 
     setEdges((oldEdges) =>
@@ -289,9 +546,87 @@ export default function WorkflowEditorPage() {
     );
 
     setSelectedNode(null);
+    setSaveMessage("");
   };
 
-  // ---------------- UI ----------------
+  // -----------------------------------------
+  // 16. SAVE WORKFLOW API
+  // -----------------------------------------
+
+  const handleSaveWorkflow = async () => {
+    if (isLoadingWorkflow) return;
+
+    if (
+      !workflowId ||
+      workflowId === "undefined"
+    ) {
+      setSaveError(true);
+      setSaveMessage("Workflow ID is missing.");
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      setSaveMessage("");
+      setSaveError(false);
+
+      // Convert nodes into backend format
+      const formattedNodes = nodes.map((node) => ({
+        id: node.id,
+        type: node.data.category,
+        position: node.position,
+        data: node.data,
+      }));
+
+      // Convert edges into backend format
+      const formattedEdges = edges.map((edge) => ({
+        id: edge.id,
+        source: edge.source,
+        target: edge.target,
+
+        ...(edge.label
+          ? { label: String(edge.label) }
+          : {}),
+      }));
+
+      // Send PATCH request
+      const response = await api.patch(
+        `/workflows/update-workflow/${workflowId}`,
+        {
+          nodes: formattedNodes,
+          edges: formattedEdges,
+        }
+      );
+
+      console.log(
+        "Workflow saved:",
+        response.data
+      );
+
+      setSaveMessage(
+        "All changes saved successfully!"
+      );
+
+      setSaveError(false);
+    } catch (error) {
+      console.error(
+        "Workflow save failed:",
+        error
+      );
+
+      setSaveMessage(
+        "Failed to save workflow. Please try again."
+      );
+
+      setSaveError(true);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // -----------------------------------------
+  // 17. UI
+  // -----------------------------------------
 
   return (
     <div className="h-screen bg-[#0b1120] text-white flex flex-col overflow-hidden">
@@ -325,15 +660,37 @@ export default function WorkflowEditorPage() {
 
         <div className="flex items-center gap-3">
 
-          <span className="text-xs text-slate-500 hidden sm:block">
-            {nodes.length} Nodes · {edges.length} Connections
-          </span>
+          <div className="hidden sm:block text-right">
+
+            <p className="text-xs text-slate-400">
+              {nodes.length} Nodes · {edges.length} Connections
+            </p>
+
+            {saveMessage && (
+              <p
+                className={`text-xs mt-1 ${
+                  saveError
+                    ? "text-red-400"
+                    : "text-emerald-400"
+                }`}
+              >
+                {saveMessage}
+              </p>
+            )}
+
+          </div>
 
           <button
             type="button"
-            className="px-4 py-2 text-sm rounded-lg border border-slate-700 hover:bg-slate-800"
+            onClick={handleSaveWorkflow}
+            disabled={isSaving || isLoadingWorkflow}
+            className="px-4 py-2 text-sm rounded-lg border border-slate-700 hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Save
+            {isLoadingWorkflow
+              ? "Loading..."
+              : isSaving
+                ? "Saving..."
+                : "Save"}
           </button>
 
           <button
@@ -366,14 +723,15 @@ export default function WorkflowEditorPage() {
           <div className="space-y-3">
 
             {nodeItems.map((item) => (
-
               <div
                 key={item.title}
                 draggable
                 onDragStart={(event) =>
                   handleDragStart(event, item)
                 }
-                onClick={() => addNodeToCanvas(item)}
+                onClick={() =>
+                  addNodeToCanvas(item)
+                }
                 className="p-3 rounded-xl border border-slate-800 bg-slate-900 hover:border-violet-500 cursor-grab active:cursor-grabbing transition"
               >
 
@@ -396,7 +754,6 @@ export default function WorkflowEditorPage() {
                 </div>
 
               </div>
-
             ))}
 
           </div>
@@ -421,7 +778,7 @@ export default function WorkflowEditorPage() {
           ref={canvasRef}
           onDrop={handleDrop}
           onDragOver={handleDragOver}
-          className="flex-1 min-w-0 relative bg-[#0f172a]"
+          className="flex-1 min-w-0 min-h-0 h-full relative bg-[#0f172a]"
         >
 
           <div className="absolute top-4 left-5 z-10 pointer-events-none">
@@ -437,6 +794,10 @@ export default function WorkflowEditorPage() {
           </div>
 
           <ReactFlow
+            style={{
+              width: "100%",
+              height: "100%",
+            }}
             nodes={nodes}
             edges={edges}
             onInit={setReactFlowInstance}
@@ -446,6 +807,7 @@ export default function WorkflowEditorPage() {
             onNodeClick={handleNodeClick}
             defaultEdgeOptions={{
               animated: true,
+
               style: {
                 stroke: "#8b5cf6",
                 strokeWidth: 2,
@@ -477,10 +839,21 @@ export default function WorkflowEditorPage() {
 
           </ReactFlow>
 
-          {/* EMPTY CANVAS */}
+          {/* LOADING OVERLAY */}
 
-          {nodes.length === 0 && (
+          {isLoadingWorkflow && (
+            <div className="absolute inset-0 z-20 flex items-center justify-center bg-[#0f172a]/80 pointer-events-none">
 
+              <p className="text-sm text-slate-300">
+                Loading saved workflow...
+              </p>
+
+            </div>
+          )}
+
+          {/* EMPTY CANVAS MESSAGE */}
+
+          {!isLoadingWorkflow && nodes.length === 0 && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
 
               <div className="text-center">
@@ -500,7 +873,6 @@ export default function WorkflowEditorPage() {
               </div>
 
             </div>
-
           )}
 
         </main>
@@ -520,10 +892,9 @@ export default function WorkflowEditorPage() {
           <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
 
             {selectedNode ? (
-
               <>
 
-                {/* SELECTED NODE HEADER */}
+                {/* SELECTED NODE */}
 
                 <div className="flex items-center gap-3 mb-5">
 
@@ -568,7 +939,6 @@ export default function WorkflowEditorPage() {
                 {/* CONDITION SETTINGS */}
 
                 {selectedNode.data.category === "condition" && (
-
                   <div className="mt-6 border-t border-slate-700 pt-5">
 
                     <h3 className="text-sm font-semibold mb-5 text-violet-300">
@@ -591,9 +961,17 @@ export default function WorkflowEditorPage() {
                       }
                       className={inputClass}
                     >
-                      <option value="Marks">Marks</option>
-                      <option value="Email">Email</option>
-                      <option value="Status">Status</option>
+                      <option value="Marks">
+                        Marks
+                      </option>
+
+                      <option value="Email">
+                        Email
+                      </option>
+
+                      <option value="Status">
+                        Status
+                      </option>
                     </select>
 
                     {/* OPERATOR */}
@@ -677,7 +1055,6 @@ export default function WorkflowEditorPage() {
                     </div>
 
                   </div>
-
                 )}
 
                 {/* DELETE NODE */}
@@ -691,9 +1068,7 @@ export default function WorkflowEditorPage() {
                 </button>
 
               </>
-
             ) : (
-
               <>
 
                 <div className="flex items-center gap-3 mb-5">
@@ -719,7 +1094,6 @@ export default function WorkflowEditorPage() {
                 </p>
 
               </>
-
             )}
 
           </div>
