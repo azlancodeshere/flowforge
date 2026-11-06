@@ -34,8 +34,7 @@ function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Reads the session from the API without touching state, so callers can
-  // decide when (and whether) to apply the result.
+
   const requestCurrentUser = useCallback(async (): Promise<User | null> => {
     const response = await api.get("/user/me");
     return (response.data.data as User | null) ?? null;
@@ -72,9 +71,7 @@ function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let cancelled = false;
 
-    // State is applied inside the promise callbacks rather than in the effect
-    // body, which avoids a cascading render. The flag drops updates that land
-    // after the provider unmounts.
+    
     requestCurrentUser()
       .then((currentUser) => {
         if (!cancelled) applySession(currentUser);

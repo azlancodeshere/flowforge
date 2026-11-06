@@ -27,15 +27,16 @@ import type {
 
 import "@xyflow/react/dist/style.css";
 
-// ------------------------------------
-// 1. Node Data Type
-// ------------------------------------
+// ---------------- TYPES ----------------
 
 type WorkflowNodeData = {
   label: string;
   icon: string;
   category: string;
   description: string;
+  field?: string;
+  operator?: string;
+  value?: string;
 };
 
 type WorkflowNode = Node<WorkflowNodeData>;
@@ -48,14 +49,11 @@ type NodeItem = {
   border: string;
 };
 
-// ------------------------------------
-// 2. Initial Data
-// ------------------------------------
+// ---------------- INITIAL DATA ----------------
 
 const initialNodes: WorkflowNode[] = [];
 const initialEdges: Edge[] = [];
 
-// Sidebar nodes
 const nodeItems: NodeItem[] = [
   {
     category: "trigger",
@@ -87,12 +85,10 @@ const nodeItems: NodeItem[] = [
   },
 ];
 
-// ------------------------------------
-// 3. Main Component
-// ------------------------------------
+const inputClass =
+  "w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-violet-500 text-white";
 
 export default function WorkflowEditorPage() {
-
   // Canvas reference
   const canvasRef = useRef<HTMLDivElement>(null);
 
@@ -110,20 +106,14 @@ export default function WorkflowEditorPage() {
   const [selectedNode, setSelectedNode] =
     useState<WorkflowNode | null>(null);
 
-  // ------------------------------------
-  // 4. Add Node
-  // ------------------------------------
+  // ---------------- ADD NODE ----------------
 
   const addNodeToCanvas = (
     item: NodeItem,
     position?: { x: number; y: number }
   ) => {
+    if (!reactFlowInstance || !canvasRef.current) return;
 
-    if (!reactFlowInstance || !canvasRef.current) {
-      return;
-    }
-
-    // Canvas position
     const bounds = canvasRef.current.getBoundingClientRect();
 
     const nodePosition =
@@ -133,19 +123,25 @@ export default function WorkflowEditorPage() {
         y: bounds.top + bounds.height / 2,
       });
 
-    // Create new node
     const newNode: WorkflowNode = {
       id: crypto.randomUUID(),
       type: "default",
       position: nodePosition,
-
       data: {
         label: item.title,
         icon: item.icon,
         category: item.category,
         description: item.description,
-      },
 
+        // Default condition settings
+        ...(item.category === "condition"
+          ? {
+              field: "Marks",
+              operator: "Greater than or equal to",
+              value: "40",
+            }
+          : {}),
+      },
       style: {
         background: "#1e293b",
         color: "#ffffff",
@@ -156,98 +152,60 @@ export default function WorkflowEditorPage() {
       },
     };
 
-    // Add node to canvas
     setNodes((oldNodes) => [...oldNodes, newNode]);
-
-    // Select newly added node
     setSelectedNode(newNode);
   };
 
-  // ------------------------------------
-  // 5. Drag Node From Sidebar
-  // ------------------------------------
+  // ---------------- DRAG AND DROP ----------------
 
   const handleDragStart = (
     event: DragEvent<HTMLDivElement>,
     item: NodeItem
   ) => {
-
     event.dataTransfer.setData("nodeTitle", item.title);
-
     event.dataTransfer.effectAllowed = "move";
   };
 
-  // ------------------------------------
-  // 6. Allow Drop On Canvas
-  // ------------------------------------
-
   const handleDragOver = (event: DragEvent<HTMLDivElement>) => {
-
     event.preventDefault();
-
     event.dataTransfer.dropEffect = "move";
   };
 
-  // ------------------------------------
-  // 7. Drop Node On Canvas
-  // ------------------------------------
-
   const handleDrop = (event: DragEvent<HTMLDivElement>) => {
-
     event.preventDefault();
 
-    if (!reactFlowInstance) {
-      return;
-    }
+    if (!reactFlowInstance) return;
 
-    // Get dragged node title
     const title = event.dataTransfer.getData("nodeTitle");
-
-    // Find node from sidebar list
     const item = nodeItems.find((node) => node.title === title);
 
-    if (!item) {
-      return;
-    }
+    if (!item) return;
 
-    // Get canvas position
     const position = reactFlowInstance.screenToFlowPosition({
       x: event.clientX,
       y: event.clientY,
     });
 
-    // Add node
     addNodeToCanvas(item, position);
   };
 
-  // ------------------------------------
-  // 8. Update Nodes
-  // ------------------------------------
+  // ---------------- NODE AND EDGE CHANGES ----------------
 
   const handleNodesChange = (changes: NodeChange<WorkflowNode>[]) => {
-
     setNodes((oldNodes) =>
       applyNodeChanges(changes, oldNodes) as WorkflowNode[]
     );
   };
 
-  // ------------------------------------
-  // 9. Update Edges
-  // ------------------------------------
-
   const handleEdgesChange = (changes: EdgeChange[]) => {
-
     setEdges((oldEdges) =>
       applyEdgeChanges(changes, oldEdges)
     );
   };
 
-  // ------------------------------------
-  // 10. Connect Nodes
-  // ------------------------------------
+  // ---------------- CONNECT NODES ----------------
 
   const handleConnect = (params: Connection) => {
-
     setEdges((oldEdges) =>
       addEdge(
         {
@@ -265,39 +223,32 @@ export default function WorkflowEditorPage() {
     );
   };
 
-  // ------------------------------------
-  // 11. Select Node
-  // ------------------------------------
+  // ---------------- SELECT NODE ----------------
 
   const handleNodeClick = (
     _event: MouseEvent,
     node: WorkflowNode
   ) => {
-
     setSelectedNode(node);
   };
 
-  // ------------------------------------
-  // 12. Update Node Name
-  // ------------------------------------
+  // ---------------- UPDATE NODE DATA ----------------
 
-  const updateNodeLabel = (value: string) => {
+  const updateSelectedNodeData = (
+    key: keyof WorkflowNodeData,
+    value: string
+  ) => {
+    if (!selectedNode) return;
 
-    if (!selectedNode) {
-      return;
-    }
-
-    // Update node in canvas
+    // Update canvas node
     setNodes((oldNodes) =>
       oldNodes.map((node) => {
-
         if (node.id === selectedNode.id) {
-
           return {
             ...node,
             data: {
               ...node.data,
-              label: value,
+              [key]: value,
             },
           };
         }
@@ -308,37 +259,27 @@ export default function WorkflowEditorPage() {
 
     // Update selected node
     setSelectedNode((oldNode) => {
-
-      if (!oldNode) {
-        return null;
-      }
+      if (!oldNode) return null;
 
       return {
         ...oldNode,
         data: {
           ...oldNode.data,
-          label: value,
+          [key]: value,
         },
       };
     });
   };
 
-  // ------------------------------------
-  // 13. Delete Selected Node
-  // ------------------------------------
+  // ---------------- DELETE NODE ----------------
 
   const deleteSelectedNode = () => {
+    if (!selectedNode) return;
 
-    if (!selectedNode) {
-      return;
-    }
-
-    // Remove node
     setNodes((oldNodes) =>
       oldNodes.filter((node) => node.id !== selectedNode.id)
     );
 
-    // Remove its connections
     setEdges((oldEdges) =>
       oldEdges.filter(
         (edge) =>
@@ -347,19 +288,15 @@ export default function WorkflowEditorPage() {
       )
     );
 
-    // Clear selection
     setSelectedNode(null);
   };
 
-  // ------------------------------------
-  // 14. UI
-  // ------------------------------------
+  // ---------------- UI ----------------
 
   return (
-
     <div className="h-screen bg-[#0b1120] text-white flex flex-col overflow-hidden">
 
-      {/* Navbar */}
+      {/* TOP NAVBAR */}
 
       <header className="h-16 border-b border-slate-800 flex items-center justify-between px-6 shrink-0">
 
@@ -410,11 +347,11 @@ export default function WorkflowEditorPage() {
 
       </header>
 
-      {/* Main Editor */}
+      {/* MAIN EDITOR */}
 
       <div className="flex flex-1 min-h-0">
 
-        {/* Left Sidebar */}
+        {/* LEFT SIDEBAR */}
 
         <aside className="w-64 border-r border-slate-800 p-5 shrink-0 overflow-y-auto">
 
@@ -436,9 +373,7 @@ export default function WorkflowEditorPage() {
                 onDragStart={(event) =>
                   handleDragStart(event, item)
                 }
-                onClick={() =>
-                  addNodeToCanvas(item)
-                }
+                onClick={() => addNodeToCanvas(item)}
                 className="p-3 rounded-xl border border-slate-800 bg-slate-900 hover:border-violet-500 cursor-grab active:cursor-grabbing transition"
               >
 
@@ -449,7 +384,6 @@ export default function WorkflowEditorPage() {
                   </div>
 
                   <div>
-
                     <h3 className="text-sm font-medium">
                       {item.title}
                     </h3>
@@ -457,7 +391,6 @@ export default function WorkflowEditorPage() {
                     <p className="text-xs text-slate-500 mt-1">
                       {item.description}
                     </p>
-
                   </div>
 
                 </div>
@@ -482,7 +415,7 @@ export default function WorkflowEditorPage() {
 
         </aside>
 
-        {/* Center Canvas */}
+        {/* CENTER CANVAS */}
 
         <main
           ref={canvasRef}
@@ -544,7 +477,7 @@ export default function WorkflowEditorPage() {
 
           </ReactFlow>
 
-          {/* Empty Canvas Message */}
+          {/* EMPTY CANVAS */}
 
           {nodes.length === 0 && (
 
@@ -572,7 +505,7 @@ export default function WorkflowEditorPage() {
 
         </main>
 
-        {/* Right Sidebar */}
+        {/* RIGHT SIDEBAR */}
 
         <aside className="w-72 border-l border-slate-800 p-5 shrink-0 overflow-y-auto hidden lg:block">
 
@@ -590,6 +523,8 @@ export default function WorkflowEditorPage() {
 
               <>
 
+                {/* SELECTED NODE HEADER */}
+
                 <div className="flex items-center gap-3 mb-5">
 
                   <div className="w-10 h-10 rounded-lg bg-violet-500/15 flex items-center justify-center">
@@ -597,7 +532,6 @@ export default function WorkflowEditorPage() {
                   </div>
 
                   <div>
-
                     <h3 className="text-sm font-medium">
                       {selectedNode.data.label}
                     </h3>
@@ -605,10 +539,11 @@ export default function WorkflowEditorPage() {
                     <p className="text-xs text-slate-500">
                       {selectedNode.data.category} Node
                     </p>
-
                   </div>
 
                 </div>
+
+                {/* NODE NAME */}
 
                 <label className="text-xs text-slate-400 block mb-2">
                   Node Name
@@ -618,14 +553,134 @@ export default function WorkflowEditorPage() {
                   type="text"
                   value={selectedNode.data.label}
                   onChange={(event) =>
-                    updateNodeLabel(event.target.value)
+                    updateSelectedNodeData(
+                      "label",
+                      event.target.value
+                    )
                   }
-                  className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-violet-500"
+                  className={inputClass}
                 />
 
                 <p className="text-xs text-slate-500 mt-4">
                   {selectedNode.data.description}
                 </p>
+
+                {/* CONDITION SETTINGS */}
+
+                {selectedNode.data.category === "condition" && (
+
+                  <div className="mt-6 border-t border-slate-700 pt-5">
+
+                    <h3 className="text-sm font-semibold mb-5 text-violet-300">
+                      Condition Settings
+                    </h3>
+
+                    {/* FIELD */}
+
+                    <label className="text-xs text-slate-400 block mb-2">
+                      Field
+                    </label>
+
+                    <select
+                      value={selectedNode.data.field || "Marks"}
+                      onChange={(event) =>
+                        updateSelectedNodeData(
+                          "field",
+                          event.target.value
+                        )
+                      }
+                      className={inputClass}
+                    >
+                      <option value="Marks">Marks</option>
+                      <option value="Email">Email</option>
+                      <option value="Status">Status</option>
+                    </select>
+
+                    {/* OPERATOR */}
+
+                    <label className="text-xs text-slate-400 block mt-5 mb-2">
+                      Operator
+                    </label>
+
+                    <select
+                      value={
+                        selectedNode.data.operator ||
+                        "Greater than or equal to"
+                      }
+                      onChange={(event) =>
+                        updateSelectedNodeData(
+                          "operator",
+                          event.target.value
+                        )
+                      }
+                      className={inputClass}
+                    >
+                      <option value="Greater than">
+                        Greater than (&gt;)
+                      </option>
+
+                      <option value="Greater than or equal to">
+                        Greater than or equal to (&gt;=)
+                      </option>
+
+                      <option value="Less than">
+                        Less than (&lt;)
+                      </option>
+
+                      <option value="Less than or equal to">
+                        Less than or equal to (&lt;=)
+                      </option>
+
+                      <option value="Equal to">
+                        Equal to (==)
+                      </option>
+
+                      <option value="Not equal to">
+                        Not equal to (!=)
+                      </option>
+                    </select>
+
+                    {/* VALUE */}
+
+                    <label className="text-xs text-slate-400 block mt-5 mb-2">
+                      Value
+                    </label>
+
+                    <input
+                      type="text"
+                      value={selectedNode.data.value ?? "40"}
+                      onChange={(event) =>
+                        updateSelectedNodeData(
+                          "value",
+                          event.target.value
+                        )
+                      }
+                      placeholder="Enter condition value"
+                      className={inputClass}
+                    />
+
+                    {/* CONDITION PREVIEW */}
+
+                    <div className="mt-5 p-3 rounded-lg bg-violet-500/10 border border-violet-500/20">
+
+                      <p className="text-xs text-violet-300 font-medium mb-2">
+                        Condition Preview
+                      </p>
+
+                      <p className="text-sm text-slate-200">
+                        {selectedNode.data.field || "Marks"}{" "}
+                        {selectedNode.data.operator ||
+                          "Greater than or equal to"}{" "}
+                        {selectedNode.data.value ?? "40"}
+                      </p>
+
+                    </div>
+
+                  </div>
+
+                )}
+
+                {/* DELETE NODE */}
 
                 <button
                   type="button"
@@ -648,7 +703,6 @@ export default function WorkflowEditorPage() {
                   </div>
 
                   <div>
-
                     <h3 className="text-sm font-medium">
                       No Node Selected
                     </h3>
@@ -656,7 +710,6 @@ export default function WorkflowEditorPage() {
                     <p className="text-xs text-slate-500">
                       Node Configuration
                     </p>
-
                   </div>
 
                 </div>
