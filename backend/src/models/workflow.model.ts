@@ -15,6 +15,8 @@ interface WorkflowEdge {
   id: string;
   source: string;
   target: string;
+  sourceHandle?: string | null;
+    targetHandle?: string | null;
   label?: string;
 }
 
@@ -55,6 +57,9 @@ const edgeSchema = new Schema<WorkflowEdge>(
     id: { type: String, required: true },
     source: { type: String, required: true },
     target: { type: String, required: true },
+    sourceHandle: { type: String, default: null },
+    targetHandle: { type: String, default: null },  
+
     label: { type: String },
   },
   { _id: false }
