@@ -7,7 +7,7 @@ import { Suspense, useEffect, useRef, useState } from "react";
 import type { DragEvent, MouseEvent } from "react";
 
 import api from "@/lib/api";
- import ConditionNode from "../../ConditionNode";
+import ConditionNode from "../../ConditionNode";
 
 import {
   ReactFlow,
@@ -31,9 +31,9 @@ import type {
 
 import "@xyflow/react/dist/style.css";
 
-// -----------------------------------------
+// =====================================================
 // 1. TYPES
-// -----------------------------------------
+// =====================================================
 
 type WorkflowNodeData = {
   label: string;
@@ -55,17 +55,13 @@ type NodeItem = {
   border: string;
 };
 
-// -----------------------------------------
-// 2. CUSTOM NODE TYPES
-// -----------------------------------------
+// =====================================================
+// 2. NODE TYPES
+// =====================================================
 
 const nodeTypes = {
   conditionNode: ConditionNode,
 };
-
-// -----------------------------------------
-// 3. SIDEBAR NODE ITEMS
-// -----------------------------------------
 
 const nodeItems: NodeItem[] = [
   {
@@ -101,9 +97,9 @@ const nodeItems: NodeItem[] = [
 const inputClass =
   "w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-violet-500 text-white";
 
-// -----------------------------------------
-// 4. PARENT COMPONENT
-// -----------------------------------------
+// =====================================================
+// 3. PAGE COMPONENT
+// =====================================================
 
 export default function WorkflowEditorPage() {
   return (
@@ -119,9 +115,9 @@ export default function WorkflowEditorPage() {
   );
 }
 
-// -----------------------------------------
-// 5. MAIN EDITOR
-// -----------------------------------------
+// =====================================================
+// 4. MAIN EDITOR COMPONENT
+// =====================================================
 
 function WorkflowEditorContent() {
   const params = useParams<{ id: string }>();
@@ -145,9 +141,20 @@ function WorkflowEditorContent() {
   const [saveMessage, setSaveMessage] = useState("");
   const [saveError, setSaveError] = useState(false);
 
-  // -----------------------------------------
-  // 6. LOAD WORKFLOW
-  // -----------------------------------------
+  // Workflow execution states
+
+  const [showRunModal, setShowRunModal] = useState(false);
+  const [inputMarks, setInputMarks] = useState("50");
+  const [isExecuting, setIsExecuting] = useState(false);
+
+  const [executionResult, setExecutionResult] =
+    useState<any>(null);
+
+  const [executionError, setExecutionError] = useState("");
+
+  // =====================================================
+  // 5. LOAD WORKFLOW
+  // =====================================================
 
   useEffect(() => {
     let isMounted = true;
@@ -159,6 +166,7 @@ function WorkflowEditorContent() {
         );
 
         const responseData = response.data?.data;
+
         const workflow =
           responseData?.workflow ?? responseData;
 
@@ -289,9 +297,9 @@ function WorkflowEditorContent() {
     };
   }, [workflowId]);
 
-  // -----------------------------------------
-  // 7. ADD NODE
-  // -----------------------------------------
+  // =====================================================
+  // 6. ADD NODE
+  // =====================================================
 
   const addNodeToCanvas = (
     item: NodeItem,
@@ -354,9 +362,9 @@ function WorkflowEditorContent() {
     setSaveMessage("");
   };
 
-  // -----------------------------------------
-  // 8. DRAG AND DROP
-  // -----------------------------------------
+  // =====================================================
+  // 7. DRAG AND DROP
+  // =====================================================
 
   const handleDragStart = (
     event: DragEvent<HTMLDivElement>,
@@ -402,9 +410,9 @@ function WorkflowEditorContent() {
     addNodeToCanvas(item, position);
   };
 
-  // -----------------------------------------
-  // 9. NODE CHANGES
-  // -----------------------------------------
+  // =====================================================
+  // 8. NODE CHANGES
+  // =====================================================
 
   const handleNodesChange = (
     changes: NodeChange<WorkflowNode>[]
@@ -417,9 +425,9 @@ function WorkflowEditorContent() {
     );
   };
 
-  // -----------------------------------------
-  // 10. EDGE CHANGES
-  // -----------------------------------------
+  // =====================================================
+  // 9. EDGE CHANGES
+  // =====================================================
 
   const handleEdgesChange = (
     changes: EdgeChange[]
@@ -429,9 +437,9 @@ function WorkflowEditorContent() {
     );
   };
 
-  // -----------------------------------------
-  // 11. CONNECT NODES
-  // -----------------------------------------
+  // =====================================================
+  // 10. CONNECT NODES
+  // =====================================================
 
   const handleConnect = (params: Connection) => {
     const branchLabel =
@@ -481,9 +489,9 @@ function WorkflowEditorContent() {
     setSaveMessage("");
   };
 
-  // -----------------------------------------
-  // 12. SELECT NODE
-  // -----------------------------------------
+  // =====================================================
+  // 11. SELECT NODE
+  // =====================================================
 
   const handleNodeClick = (
     _event: MouseEvent,
@@ -492,9 +500,9 @@ function WorkflowEditorContent() {
     setSelectedNode(node);
   };
 
-  // -----------------------------------------
-  // 13. UPDATE NODE DATA
-  // -----------------------------------------
+  // =====================================================
+  // 12. UPDATE NODE DATA
+  // =====================================================
 
   const updateSelectedNodeData = (
     key: keyof WorkflowNodeData,
@@ -531,9 +539,9 @@ function WorkflowEditorContent() {
     setSaveMessage("");
   };
 
-  // -----------------------------------------
-  // 14. DELETE NODE
-  // -----------------------------------------
+  // =====================================================
+  // 13. DELETE NODE
+  // =====================================================
 
   const deleteSelectedNode = () => {
     if (!selectedNode) return;
@@ -556,9 +564,9 @@ function WorkflowEditorContent() {
     setSaveMessage("");
   };
 
-  // -----------------------------------------
-  // 15. SAVE WORKFLOW
-  // -----------------------------------------
+  // =====================================================
+  // 14. SAVE WORKFLOW
+  // =====================================================
 
   const handleSaveWorkflow = async () => {
     if (isLoadingWorkflow || isSaving) return;
@@ -616,9 +624,116 @@ function WorkflowEditorContent() {
     }
   };
 
-  // -----------------------------------------
+  // =====================================================
+  // 15. RUN WORKFLOW
+  // =====================================================
+
+  const handleRunWorkflow = async () => {
+    if (
+      !workflowId ||
+      isExecuting ||
+      isSaving ||
+      isLoadingWorkflow
+    ) {
+      return;
+    }
+
+    const marks = Number(inputMarks);
+
+    if (
+      inputMarks.trim() === "" ||
+      !Number.isFinite(marks)
+    ) {
+      setExecutionError("Please enter valid marks.");
+      return;
+    }
+
+    if (nodes.length === 0) {
+      setExecutionError(
+        "Add nodes before running the workflow."
+      );
+      return;
+    }
+
+    const hasTrigger = nodes.some(
+      (node) => node.data.category === "trigger"
+    );
+
+    if (!hasTrigger) {
+      setExecutionError(
+        "Your workflow must contain a Manual Trigger node."
+      );
+      return;
+    }
+
+    try {
+      setIsExecuting(true);
+      setExecutionError("");
+      setExecutionResult(null);
+
+      // Save latest canvas data first
+
+      const formattedNodes = nodes.map((node) => ({
+        id: node.id,
+        type: node.data.category,
+        position: node.position,
+        data: node.data,
+      }));
+
+      const formattedEdges = edges.map((edge) => ({
+        id: edge.id,
+        source: edge.source,
+        target: edge.target,
+        sourceHandle: edge.sourceHandle ?? null,
+        targetHandle: edge.targetHandle ?? null,
+
+        ...(edge.label
+          ? { label: String(edge.label) }
+          : {}),
+      }));
+
+      await api.patch(
+        `/workflows/update-workflow/${workflowId}`,
+        {
+          nodes: formattedNodes,
+          edges: formattedEdges,
+        }
+      );
+
+      // Execute workflow
+
+      const response = await api.post(
+        `/workflows/execute-workflow/${workflowId}/execute`,
+        {
+          inputData: {
+            Marks: marks,
+          },
+        }
+      );
+
+      setExecutionResult(
+        response.data?.data ?? response.data
+      );
+
+      setShowRunModal(false);
+
+    } catch (error: any) {
+      console.error("Workflow execution failed:", error);
+
+      setExecutionError(
+        error.response?.data?.message ||
+          error.message ||
+          "Workflow execution failed."
+      );
+
+    } finally {
+      setIsExecuting(false);
+    }
+  };
+
+  // =====================================================
   // 16. UI
-  // -----------------------------------------
+  // =====================================================
 
   return (
     <div className="h-screen bg-[#0b1120] text-white flex flex-col overflow-hidden">
@@ -687,7 +802,17 @@ function WorkflowEditorContent() {
 
           <button
             type="button"
-            className="px-5 py-2 text-sm rounded-lg bg-violet-600 hover:bg-violet-700 font-medium"
+            onClick={() => {
+              setExecutionError("");
+              setExecutionResult(null);
+              setShowRunModal(true);
+            }}
+            disabled={
+              isLoadingWorkflow ||
+              isSaving ||
+              isExecuting
+            }
+            className="px-5 py-2 text-sm rounded-lg bg-violet-600 hover:bg-violet-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
             ▶ Run Workflow
           </button>
@@ -842,6 +967,7 @@ function WorkflowEditorContent() {
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
 
               <div className="text-center">
+
                 <div className="text-4xl mb-3">
                   ＋
                 </div>
@@ -853,6 +979,7 @@ function WorkflowEditorContent() {
                 <p className="text-xs text-slate-500 mt-2">
                   Add nodes from the left sidebar to get started.
                 </p>
+
               </div>
 
             </div>
@@ -1014,6 +1141,7 @@ function WorkflowEditorContent() {
                       </p>
 
                       <div className="mt-3 flex gap-3 text-xs">
+
                         <span className="text-emerald-400">
                           ● True
                         </span>
@@ -1021,6 +1149,7 @@ function WorkflowEditorContent() {
                         <span className="text-red-400">
                           ● False
                         </span>
+
                       </div>
 
                     </div>
@@ -1048,6 +1177,161 @@ function WorkflowEditorContent() {
         </aside>
 
       </div>
+
+      {/* ================================================= */}
+      {/* RUN WORKFLOW MODAL */}
+      {/* ================================================= */}
+
+      {showRunModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+
+          <div className="w-full max-w-md rounded-xl border border-slate-700 bg-slate-900 p-6 shadow-2xl">
+
+            <div className="flex items-start justify-between gap-4">
+
+              <div>
+                <h2 className="text-lg font-semibold">
+                  Run Workflow
+                </h2>
+
+                <p className="mt-1 text-sm text-slate-400">
+                  Enter input data for your workflow.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowRunModal(false)}
+                disabled={isExecuting}
+                className="text-slate-400 hover:text-white disabled:opacity-50"
+              >
+                ✕
+              </button>
+
+            </div>
+
+            <label className="mt-6 mb-2 block text-sm text-slate-300">
+              Marks
+            </label>
+
+            <input
+              type="number"
+              min="0"
+              value={inputMarks}
+              onChange={(event) =>
+                setInputMarks(event.target.value)
+              }
+              placeholder="Enter marks (e.g. 50)"
+              className={inputClass}
+              disabled={isExecuting}
+            />
+
+            {executionError && (
+              <p className="mt-3 text-sm text-red-400">
+                {executionError}
+              </p>
+            )}
+
+            <div className="mt-6 flex justify-end gap-3">
+
+              <button
+                type="button"
+                onClick={() => setShowRunModal(false)}
+                disabled={isExecuting}
+                className="rounded-lg border border-slate-700 px-4 py-2 text-sm hover:bg-slate-800 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={handleRunWorkflow}
+                disabled={
+                  isExecuting ||
+                  isLoadingWorkflow ||
+                  isSaving
+                }
+                className="rounded-lg bg-violet-600 px-5 py-2 text-sm font-medium hover:bg-violet-700 disabled:opacity-50"
+              >
+                {isExecuting ? "Running..." : "Run"}
+              </button>
+
+            </div>
+
+          </div>
+
+        </div>
+      )}
+
+      {/* ================================================= */}
+      {/* EXECUTION RESULT */}
+      {/* ================================================= */}
+
+      {executionResult && (
+        <div className="fixed bottom-5 right-5 z-40 w-[min(22rem,calc(100vw-2rem))] max-h-[70vh] overflow-y-auto rounded-xl border border-slate-700 bg-slate-900 p-5 shadow-2xl">
+
+          <div className="flex items-center justify-between gap-3">
+
+            <h3 className="font-semibold text-white">
+              Execution Result
+            </h3>
+
+            <button
+              type="button"
+              onClick={() => setExecutionResult(null)}
+              className="text-slate-400 hover:text-white"
+            >
+              ✕
+            </button>
+
+          </div>
+
+          <p className="mt-3 text-sm text-emerald-400">
+            Status: {String(executionResult.status ?? "received")}
+          </p>
+
+          <p className="mt-2 text-sm text-slate-300">
+            {executionResult.message ??
+              "Workflow execution response received."}
+          </p>
+
+          <p className="mt-3 text-xs text-slate-500">
+            Input Marks: {inputMarks}
+          </p>
+
+          {Array.isArray(executionResult.executedNodes) && (
+            <div className="mt-4 space-y-2">
+
+              {executionResult.executedNodes.map(
+                (node: any) => (
+                  <div
+                    key={node.nodeId}
+                    className="rounded-lg bg-slate-800 p-3"
+                  >
+
+                    <p className="text-sm font-medium text-white">
+                      {node.nodeName}
+                    </p>
+
+                    <p className="text-xs text-slate-400 mt-1">
+                      {node.nodeType}
+                    </p>
+
+                    <p className="text-xs text-emerald-400 mt-1">
+                      {typeof node.result === "object"
+                        ? JSON.stringify(node.result)
+                        : node.result}
+                    </p>
+
+                  </div>
+                )
+              )}
+
+            </div>
+          )}
+
+        </div>
+      )}
 
     </div>
   );
